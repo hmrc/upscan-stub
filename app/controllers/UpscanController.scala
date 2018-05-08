@@ -1,7 +1,6 @@
 package controllers
 
-import java.nio.file.{Files, Paths}
-import java.security.MessageDigest
+import java.io.File
 import javax.inject.Inject
 
 import models.{PreparedUpload, UploadSettings}
@@ -25,19 +24,16 @@ class UpscanController @Inject()(prepareUploadService: PrepareUploadService) ext
     }
 
   def upload() = Action(parse.multipartFormData) { request =>
-    request.body.file("file").map { file =>
-      val fileName = Paths.get(file.filename).getFileName
-      val filePath = Paths.get(s"/tmp/picture/$fileName")
-      val checksum = calculateChecksum(Files.readAllBytes(filePath))
+    request.body.file("file").map { fileField =>
+      // TODO: Validate form and fake AWS response
 
-      Ok(Json.obj())
+      val filename = fileField.filename
+      // TODO: Put this in a tmp directory created on startup
+
+      fileField.ref.moveTo(new File(s"/resources/uploaded/$filename"))
+      Ok("File uploaded")
     } getOrElse {
-      Ok(Json.obj())
+      BadRequest(Json.obj("error" -> "Form does not contain valid file field"))
     }
   }
-
-  private def calculateChecksum(content: Array[Byte]) = MessageDigest.getInstance("MD5")
-    .digest(content)
-    .map("%02x".format(_))
-    .mkString
 }
