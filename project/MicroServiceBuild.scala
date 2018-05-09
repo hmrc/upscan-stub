@@ -3,8 +3,8 @@ import sbt._
 object MicroServiceBuild extends Build with MicroService {
   import scala.util.Properties.envOrElse
 
-  val appName = "upscan-stub-prototype-simple"
-  val appVersion = envOrElse("UPSCAN_STUB_PROTOTYPE_SIMPLE_VERSION", "999-SNAPSHOT")
+  val appName = "upscan-stub"
+  val appVersion = envOrElse("UPSCAN_STUB_VERSION", "999-SNAPSHOT")
 
   override lazy val appDependencies: Seq[ModuleID] = AppDependencies()
 }
