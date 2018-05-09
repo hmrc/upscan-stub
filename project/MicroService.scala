@@ -1,9 +1,9 @@
 import sbt.Keys._
-import sbt.Tests.{SubProcess, Group}
+import sbt.Tests.{Group, SubProcess}
 import sbt._
 import play.routes.compiler.StaticRoutesGenerator
+import play.sbt.PlayImport.PlayKeys
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
-
 
 trait MicroService {
 
@@ -17,13 +17,14 @@ trait MicroService {
   val appName: String
   val appVersion: String
 
-  lazy val appDependencies : Seq[ModuleID] = ???
-  lazy val plugins : Seq[Plugins] = Seq(play.sbt.PlayScala)
-  lazy val playSettings : Seq[Setting[_]] = Seq.empty
+  lazy val appDependencies: Seq[ModuleID] = ???
+  lazy val plugins: Seq[Plugins]          = Seq(play.sbt.PlayScala)
+  lazy val playSettings: Seq[Setting[_]]  = Seq.empty
 
   lazy val microservice = Project(appName, file("."))
-    .enablePlugins(plugins : _*)
-    .settings(playSettings : _*)
+    .enablePlugins(plugins: _*)
+    .settings(PlayKeys.playDefaultPort := 9570)
+    .settings(playSettings: _*)
     .settings(version := appVersion)
     .settings(scalaSettings: _*)
     .settings(publishingSettings: _*)
@@ -37,7 +38,7 @@ trait MicroService {
       retrieveManaged := true,
       routesGenerator := StaticRoutesGenerator
     )
-    .settings(Repositories.playPublishingSettings : _*)
+    .settings(Repositories.playPublishingSettings: _*)
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
     .settings(
@@ -45,7 +46,8 @@ trait MicroService {
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
-      parallelExecution in IntegrationTest := false)
+      parallelExecution in IntegrationTest := false
+    )
     .settings(SbtBuildInfo(): _*)
     .disablePlugins(sbt.plugins.JUnitXmlReportPlugin)
     .settings(resolvers ++= Seq(
@@ -57,8 +59,8 @@ trait MicroService {
 private object TestPhases {
 
   def oneForkedJvmPerTest(tests: Seq[TestDefinition]) =
-    tests map {
-      test => new Group(test.name, Seq(test), SubProcess(ForkOptions(runJVMOptions = Seq("-Dtest.name=" + test.name))))
+    tests map { test =>
+      new Group(test.name, Seq(test), SubProcess(ForkOptions(runJVMOptions = Seq("-Dtest.name=" + test.name))))
     }
 }
 
@@ -68,12 +70,10 @@ private object Repositories {
   import PublishingSettings._
   import NexusPublishing._
 
-  lazy val playPublishingSettings : Seq[sbt.Setting[_]] = sbtrelease.ReleasePlugin.releaseSettings ++ Seq(
-
+  lazy val playPublishingSettings: Seq[sbt.Setting[_]] = sbtrelease.ReleasePlugin.releaseSettings ++ Seq(
     credentials += SbtCredentials,
-
-    publishArtifact in(Compile, packageDoc) := false,
-    publishArtifact in(Compile, packageSrc) := false
+    publishArtifact in (Compile, packageDoc) := false,
+    publishArtifact in (Compile, packageSrc) := false
   ) ++
     publishAllArtefacts ++
     nexusPublishingSettings
