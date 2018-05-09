@@ -3,13 +3,13 @@ package services
 import java.nio.file.Files
 import java.util.UUID
 
-import models.Reference
+import model.Reference
 import org.apache.commons.io.FileUtils
 import org.scalatest.{GivenWhenThen, Matchers}
 import play.api.libs.Files.TemporaryFile
 import uk.gov.hmrc.play.test.UnitSpec
 
-class FileStorageServiceTest extends UnitSpec with Matchers with GivenWhenThen {
+class FileStorageServiceSpec extends UnitSpec with Matchers with GivenWhenThen {
 
   val fileStorageService = new FileStorageService
 

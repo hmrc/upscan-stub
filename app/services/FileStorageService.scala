@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.Files
 
 import javax.inject.Singleton
-import models.Reference
+import model.Reference
 import org.apache.commons.io.FileUtils
 import play.api.libs.{Files => PlayFiles}
 

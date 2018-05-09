@@ -3,17 +3,17 @@ package services
 import java.net.URL
 
 import javax.inject.Inject
-import models.{Reference, UploadedFile}
+import model.{FileData, Reference}
 import play.api.Logger
 import play.api.libs.json._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import models.JsonWriteHelpers.urlFormats
+import model.JsonWriteHelpers.urlFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait NotificationService {
-  def sendNotification(uploadedFile: UploadedFile): Future[Unit]
+  def sendNotification(uploadedFile: FileData): Future[Unit]
 }
 
 case class ReadyCallbackBody(reference: Reference, downloadUrl: URL, fileStatus: FileStatus = ReadyFileStatus)
@@ -46,7 +46,7 @@ object FileStatus {
 class HttpNotificationService @Inject()(httpClient: HttpClient)(implicit ec: ExecutionContext)
     extends NotificationService {
 
-  override def sendNotification(uploadedFile: UploadedFile): Future[Unit] = {
+  override def sendNotification(uploadedFile: FileData): Future[Unit] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrier()
 
