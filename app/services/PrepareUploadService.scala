@@ -5,7 +5,7 @@ import java.time.temporal.ChronoUnit.DAYS
 import java.util.UUID
 
 import javax.inject.Inject
-import models._
+import model._
 
 class PrepareUploadService @Inject()() {
 
@@ -19,6 +19,7 @@ class PrepareUploadService @Inject()() {
           "X-Amz-Algorithm"         -> "AWS4-HMAC-SHA256",
           "X-Amz-Expiration"        -> expiration(),
           "X-Amz-Signature"         -> "xxxx",
+          "X-Amz-Date"              -> "20111015T080000Z",
           "key"                     -> reference.value,
           "acl"                     -> "private",
           "X-Amz-Credential"        -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
