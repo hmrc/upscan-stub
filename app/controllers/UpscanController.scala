@@ -7,7 +7,6 @@ import java.util.UUID
 import akka.util.ByteString
 import javax.inject.Inject
 import model.{FileData, Reference, UploadPostForm, UploadSettings}
-import models._
 import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
