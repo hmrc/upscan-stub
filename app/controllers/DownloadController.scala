@@ -9,11 +9,7 @@ import play.api.mvc.{Action, ResponseHeader, Result}
 import services.FileStorageService
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
-import scala.concurrent.ExecutionContext
-
-
-class DownloadController @Inject()(storageService: FileStorageService)(implicit ec: ExecutionContext)
-  extends BaseController {
+class DownloadController @Inject()(storageService: FileStorageService) extends BaseController {
 
   def download(reference: String) = Action {
     (for {
@@ -21,7 +17,7 @@ class DownloadController @Inject()(storageService: FileStorageService)(implicit 
     } yield {
       Result(
         header = ResponseHeader(200, Map.empty),
-        body = HttpEntity.Strict(ByteString(source.body), None)
+        body   = HttpEntity.Strict(ByteString(source.body), None)
       )
     }) getOrElse NotFound
 

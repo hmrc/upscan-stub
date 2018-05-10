@@ -50,7 +50,7 @@ class UploadController @Inject()(
 
     validatedInput.fold(
       errors => BadRequest(invalidRequestBody("400", errors.mkString(", "))),
-      validInput => { handleValidUpload(validInput._1, validInput._2); Ok }
+      validInput => { handleValidUpload(validInput._1, validInput._2); NoContent }
     )
   }
 
@@ -89,6 +89,6 @@ class UploadController @Inject()(
       <Code>$code</Code>
       <Message>$message</Message>
       <Resource>NoFileReference</Resource>
-      <RequestId>${UUID.randomUUID}</RequestId>
+      <RequestId>SomeRequestId</RequestId>
     </Error>""")
 }
