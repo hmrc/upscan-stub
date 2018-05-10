@@ -1,5 +1,5 @@
 # microservice specific routes
 
-POST       /initiate               @controllers.UpscanController.prepareUpload
-POST       /upload                 @controllers.UpscanController.upload
-GET        /download/:reference    @controllers.UpscanController.download(reference : String)
+POST       /initiate               @controllers.InitiateController.prepareUpload
+POST       /upload                 @controllers.UploadController.upload
+GET        /download/:reference    @controllers.DownloadController.download(reference : String)

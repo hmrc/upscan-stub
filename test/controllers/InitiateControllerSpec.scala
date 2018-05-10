@@ -5,7 +5,6 @@ import akka.stream._
 import model.{PreparedUpload, Reference, UploadFormTemplate}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
-import org.mockito.exceptions.base.MockitoException
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{GivenWhenThen, Matchers}
 import play.api.libs.json.{JsValue, Json}
@@ -17,7 +16,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class UpscanControllerSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
+class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -45,12 +44,7 @@ class UpscanControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       )
       val prepareService = mock[PrepareUploadService]
       Mockito.when(prepareService.prepareUpload(any(), any())).thenReturn(preparedUpload)
-
-      val storageService = mock[FileStorageService]
-      val notificationService = mock[NotificationService]
-
-      val controller = new UpscanController(prepareService, storageService, notificationService)(ExecutionContext.Implicits.global)
-
+      val controller = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
       val result: Future[Result] = controller.prepareUpload()(request)
 
       Then("a successful HTTP response should be returned")
@@ -85,11 +79,7 @@ class UpscanControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
 
       When("the prepare upload method is called")
       val prepareService = mock[PrepareUploadService]
-      val storageService = mock[FileStorageService]
-      val notificationService = mock[NotificationService]
-
-      val controller = new UpscanController(prepareService, storageService, notificationService)(ExecutionContext.Implicits.global)
-
+      val controller = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
       val result: Future[Result] = controller.prepareUpload()(request)
 
       Then("a BadRequest response should be returned")
@@ -104,11 +94,7 @@ class UpscanControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
 
       When("the prepare upload method is called")
       val prepareService = mock[PrepareUploadService]
-      val storageService = mock[FileStorageService]
-      val notificationService = mock[NotificationService]
-
-      val controller = new UpscanController(prepareService, storageService, notificationService)(ExecutionContext.Implicits.global)
-
+      val controller = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
       val result: Future[Result] = controller.prepareUpload()(request).run()
 
       Then("an Invalid Media Type response should be returned")
