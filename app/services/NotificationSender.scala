@@ -12,7 +12,7 @@ import model.JsonWriteHelpers.urlFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait NotificationService {
+trait NotificationSender {
   def sendNotification(uploadedFile: FileData): Future[Unit]
 }
 
@@ -43,8 +43,8 @@ object FileStatus {
   }
 }
 
-class HttpNotificationService @Inject()(httpClient: HttpClient)(implicit ec: ExecutionContext)
-    extends NotificationService {
+class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: ExecutionContext)
+    extends NotificationSender {
 
   override def sendNotification(uploadedFile: FileData): Future[Unit] = {
 
