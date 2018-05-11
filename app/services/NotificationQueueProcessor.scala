@@ -3,8 +3,7 @@ package services
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.pipe
 import akka.util.Timeout
-import javax.inject.{Inject, Provider, Singleton}
-import model.FileData
+import model.ProcessedFile
 import play.api.Logger
 
 import scala.collection.immutable.Queue
@@ -19,7 +18,7 @@ class NotificationQueueProcessor(
   private val notificationProcessingActor =
     actorSystem.actorOf(QueueProcessingActor(notificationService, maximumRetryCount, retryDelay))
 
-  def enqueueNotification(uploadedFile: FileData): Unit =
+  def enqueueNotification(uploadedFile: ProcessedFile): Unit =
     notificationProcessingActor ! EnqueueNotification(Notification(uploadedFile))
 
 }
@@ -28,7 +27,7 @@ case class EnqueueNotification(notification: Notification)
 case class NotificationProcessedSuccessfully(notification: Notification)
 case class NotificationProcessingFailed(e: Throwable, notification: Notification)
 
-case class Notification(fileData: FileData, retryCount: Int = 0) {
+case class Notification(fileData: ProcessedFile, retryCount: Int = 0) {
   def retried: Notification = this.copy(retryCount = retryCount + 1)
 }
 

@@ -1,11 +1,10 @@
 package services
 
 import java.net.URL
-import java.time.Instant
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.ActorSystem
-import model.{FileData, Reference}
+import model.{ProcessedFile, Reference, UploadedFile}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
 import uk.gov.hmrc.play.test.UnitSpec
@@ -31,9 +30,9 @@ class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll wit
 
     val callCounter = new AtomicInteger(0)
 
-    val successfulNotifications = TrieMap[Reference, FileData]()
+    val successfulNotifications = TrieMap[Reference, ProcessedFile]()
 
-    override def sendNotification(uploadedFile: FileData): Future[Unit] =
+    override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
       if (callCounter.incrementAndGet() > expectedFailures) {
         successfulNotifications.put(uploadedFile.reference, uploadedFile)
         Future.successful(())
@@ -50,26 +49,11 @@ class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll wit
       val processor = new NotificationQueueProcessor(notificationService)
 
       val file1 =
-        FileData(
-          new URL("http://127.0.0.1/callback"),
-          Reference("REF1"),
-          new URL("http://127.0.0.1/download"),
-          1L,
-          Some(Instant.now()))
+        UploadedFile(new URL("http://127.0.0.1/callback"), Reference("REF1"), new URL("http://127.0.0.1/download"))
       val file2 =
-        FileData(
-          new URL("http://127.0.0.1/callback"),
-          Reference("REF2"),
-          new URL("http://127.0.0.1/download"),
-          1L,
-          Some(Instant.now()))
+        UploadedFile(new URL("http://127.0.0.1/callback"), Reference("REF2"), new URL("http://127.0.0.1/download"))
       val file3 =
-        FileData(
-          new URL("http://127.0.0.1/callback"),
-          Reference("REF3"),
-          new URL("http://127.0.0.1/download"),
-          1L,
-          Some(Instant.now()))
+        UploadedFile(new URL("http://127.0.0.1/callback"), Reference("REF3"), new URL("http://127.0.0.1/download"))
 
       processor.enqueueNotification(file1)
       processor.enqueueNotification(file2)
@@ -90,7 +74,7 @@ class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll wit
         new NotificationQueueProcessor(notificationService, retryDelay = 30 milliseconds, maximumRetryCount = 2)
 
       val file =
-        FileData(new URL("http://callback"), Reference("REF1"), new URL("http://download"), 1L, Some(Instant.now()))
+        UploadedFile(new URL("http://callback"), Reference("REF1"), new URL("http://download"))
 
       processor.enqueueNotification(file)
 
@@ -106,7 +90,7 @@ class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll wit
         new NotificationQueueProcessor(notificationService, retryDelay = 100 milliseconds, maximumRetryCount = 2)
 
       val file =
-        FileData(new URL("http://callback"), Reference("REF1"), new URL("http://download"), 1L, Some(Instant.now()))
+        UploadedFile(new URL("http://callback"), Reference("REF1"), new URL("http://download"))
 
       processor.enqueueNotification(file)
 

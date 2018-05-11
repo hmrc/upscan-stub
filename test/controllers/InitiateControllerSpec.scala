@@ -10,7 +10,7 @@ import org.scalatest.{GivenWhenThen, Matchers}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
-import services.{FileStorageService, PrepareUploadService}
+import services.PrepareUploadService
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration._
