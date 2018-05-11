@@ -35,5 +35,11 @@ It is possible to test the uploaded of a virus-infected file using a test file i
 ## Running locally
 Start your ```upscan-stub``` service on port 9570 with the following command: ```sbt "run 9570"```
 
+##### Service Manager
+Alternatively, the Service Manager profile for Upscan can be started with:
+```
+    sm -r --start UPSCAN
+```
+
 ### Using ```upscan-listener```
 The flow of calls relies upon a "listening" endpoint within your service to receive asynchronous notification once your file has been virus scanned and is ready to downloaded within  your service. If you require a service to capture callbacks whilst developing your own service, you can use the helper service [```upscan-listener```](https://github.com/hmrc/upscan-listener).
