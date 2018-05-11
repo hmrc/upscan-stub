@@ -11,9 +11,8 @@ import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
 class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(implicit ec: ExecutionContext)
-  extends BaseController {
+    extends BaseController {
 
   def prepareUpload(): Action[JsValue] =
     Action.async(parse.json) { implicit request =>
