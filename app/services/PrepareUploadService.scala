@@ -6,11 +6,18 @@ import java.util.UUID
 
 import javax.inject.Inject
 import model._
+import play.api.libs.json.{JsArray, JsObject, Json}
 
 class PrepareUploadService @Inject()() {
+  case class Policy(json: JsObject) {
+    import utils.Implicits.Base64StringOps
+    def asBase64String(): String = Json.stringify(json).base64encode
+  }
 
   def prepareUpload(settings: UploadSettings, uploadUrl: String): PreparedUpload = {
     val reference = generateReference()
+    val policy = toPolicy(settings)
+
     PreparedUpload(
       reference = reference,
       uploadRequest = UploadFormTemplate(
@@ -24,7 +31,7 @@ class PrepareUploadService @Inject()() {
           "acl"                     -> "private",
           "X-Amz-Credential"        -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
           "x-amz-meta-callback-url" -> settings.callbackUrl,
-          "policy"                  -> "xxxxxxxx=="
+          "policy"                  -> policy.asBase64String
         )
       )
     )
@@ -33,4 +40,19 @@ class PrepareUploadService @Inject()() {
   private def generateReference(): Reference = Reference(UUID.randomUUID().toString)
 
   private def expiration(): String = Instant.now().plus(1, DAYS).toString
+
+  private def toPolicy(settings: UploadSettings): Policy = {
+    val json = Json.obj(
+      "conditions" -> JsArray(
+        Seq(
+          Json.arr(
+            "content-length-range",
+            settings.minimumFileSize,
+            settings.maximumFileSize
+          )
+        )
+      )
+    )
+    Policy(json)
+  }
 }
