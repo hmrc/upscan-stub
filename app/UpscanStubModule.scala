@@ -7,12 +7,11 @@ import services.{HttpNotificationSender, NotificationQueueProcessor, Notificatio
 class UpscanStubModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
     bind[NotificationSender].to[HttpNotificationSender],
-    bind[NotificationQueueProcessor].toProvider[NotificationQueueProcessorProvider]
+    bind[NotificationQueueProcessor].toProvider[NotificationQueueProcessorProvider].in[Singleton]
   )
 
 }
 
-@Singleton
 class NotificationQueueProcessorProvider @Inject()(notificationService: NotificationSender)(actorSystem: ActorSystem)
     extends Provider[NotificationQueueProcessor] {
   override def get(): NotificationQueueProcessor =
