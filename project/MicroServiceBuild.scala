@@ -1,17 +1,24 @@
 import sbt._
+import uk.gov.hmrc.SbtAutoBuildPlugin
+import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
+import uk.gov.hmrc.versioning.SbtGitVersioning
 
 object MicroServiceBuild extends Build with MicroService {
-  import scala.util.Properties.envOrElse
 
-  val appName    = "upscan-stub"
-  val appVersion = envOrElse("UPSCAN_STUB_VERSION", "999-SNAPSHOT")
+  val appName = "upscan-stub"
+
+  override lazy val plugins: Seq[Plugins] = Seq(
+    SbtAutoBuildPlugin,
+    SbtGitVersioning,
+    SbtDistributablesPlugin
+  )
 
   override lazy val appDependencies: Seq[ModuleID] = AppDependencies()
 }
 
 private object AppDependencies {
-  import play.sbt.PlayImport._
   import play.core.PlayVersion
+  import play.sbt.PlayImport._
 
   val compile = Seq(
     ws,
