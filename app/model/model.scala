@@ -62,9 +62,10 @@ case class UploadPostForm(
 
 //Internal model of uploaded file
 
-case class FileData(
-  callbackUrl: URL,
-  reference: Reference,
-  downloadUrl: URL,
-  size: Long,
-  uploadTimestamp: Option[Instant])
+sealed trait ProcessedFile {
+  def reference: Reference
+}
+
+case class UploadedFile(callbackUrl: URL, reference: Reference, downloadUrl: URL) extends ProcessedFile
+
+case class QuarantinedFile(callbackUrl: URL, reference: Reference, error: String) extends ProcessedFile
