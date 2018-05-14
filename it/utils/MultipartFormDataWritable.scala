@@ -1,3 +1,5 @@
+package utils
+
 import java.nio.file.{Files, Paths}
 
 import play.api.http.{HeaderNames, Writeable}

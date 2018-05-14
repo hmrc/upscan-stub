@@ -1,3 +1,5 @@
+package controllers
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model.PreparedUpload
