@@ -69,3 +69,26 @@ sealed trait ProcessedFile {
 case class UploadedFile(callbackUrl: URL, reference: Reference, downloadUrl: URL) extends ProcessedFile
 
 case class QuarantinedFile(callbackUrl: URL, reference: Reference, error: String) extends ProcessedFile
+
+case class AWSError(code: String, message: String, requestId: String)
+
+// Parse a json String representing an AWS policy, and extract the min/max values for the content-length-range condition.
+// This is assumed to be the first condition present in the array.
+case class ContentLengthRange(min: Option[Long], max: Option[Long])
+
+object ContentLengthRange {
+  def extract(policy: String): Option[ContentLengthRange] = {
+    val json: JsValue = Json.parse(policy)
+
+    val conditions = (json \ "conditions")(0)
+
+    val contentLengthRangeMaybe = conditions(0).asOpt[String]
+
+    for {
+      clr <- contentLengthRangeMaybe
+      if clr == "content-length-range"
+      minMaybe = conditions(1).asOpt[Long]
+      maxMaybe = conditions(2).asOpt[Long]
+    } yield ContentLengthRange(minMaybe,maxMaybe)
+  }
+}

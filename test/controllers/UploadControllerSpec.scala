@@ -2,12 +2,10 @@ package controllers
 
 import java.io.File
 import java.net.URL
-import java.nio.file.{Files, Paths}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model.{QuarantinedFile, Reference, UploadedFile}
-import org.apache.commons.io.FileUtils
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
@@ -17,6 +15,7 @@ import play.api.mvc.{MultipartFormData, Result}
 import play.api.test.FakeRequest
 import services._
 import uk.gov.hmrc.play.test.UnitSpec
+import utils.Implicits.Base64StringOps
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -40,7 +39,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           "X-Amz-Algorithm"         -> Seq("some-algorithm"),
           "X-Amz-Credential"        -> Seq("some-credentials"),
           "X-Amz-Date"              -> Seq("some-date"),
-          "policy"                  -> Seq("some-policy"),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode),
           "X-Amz-Signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
@@ -94,7 +93,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           "X-Amz-Algorithm"         -> Seq("some-algorithm"),
           "X-Amz-Credential"        -> Seq("some-credentials"),
           "X-Amz-Date"              -> Seq("some-date"),
-          "policy"                  -> Seq("some-policy"),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode),
           "X-Amz-Signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
@@ -188,7 +187,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           "X-Amz-Algorithm"         -> Seq("some-algorithm"),
           "X-Amz-Credential"        -> Seq("some-credentials"),
           "X-Amz-Date"              -> Seq("some-date"),
-          "policy"                  -> Seq("some-policy"),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode),
           "X-Amz-Signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),

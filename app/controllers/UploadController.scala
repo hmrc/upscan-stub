@@ -1,10 +1,9 @@
 package controllers
 
 import java.net.URL
-import java.util.UUID
 
 import javax.inject.Inject
-import model.{QuarantinedFile, Reference, UploadPostForm, UploadedFile}
+import model._
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.libs.Files
@@ -41,7 +40,7 @@ class UploadController @Inject()(
       .bindFromRequest()
       .fold(
         formWithErrors => Left(formWithErrors.errors.map(_.toString)),
-        formValues => Right(formValues)
+        formValues     => Right(formValues)
       )
 
     val validatedFile = request.body.file("file").map(Right(_)).getOrElse(Left(Seq("'file' field not found")))
@@ -49,14 +48,50 @@ class UploadController @Inject()(
     val validatedInput = ApplicativeHelpers.product(validatedForm, validatedFile)
 
     validatedInput.fold(
-      errors => BadRequest(invalidRequestBody("400", errors.mkString(", "))),
-      validInput => { handleValidUpload(validInput._1, validInput._2); NoContent }
+      errors     => BadRequest(invalidRequestBody("400", errors.mkString(", "))),
+      validInput => withPolicyChecked(validInput._1, validInput._2) {
+        storeAndNotify(validInput._1, validInput._2)
+        NoContent
+      }
     )
   }
 
-  private def handleValidUpload(form: UploadPostForm, file: MultipartFormData.FilePart[Files.TemporaryFile])(
-    implicit request: RequestHeader): Unit = {
+  private def withPolicyChecked(form: UploadPostForm, file: MultipartFormData.FilePart[Files.TemporaryFile])
+                               (block: => Result): Result = {
+    import utils.Implicits.Base64StringOps
 
+    val policyJson: String = form.policy.base64decode
+
+    val maybeContentLengthCondition: Option[ContentLengthRange] = ContentLengthRange.extract(policyJson)
+
+    val maybeInvalidContentLength: Option[AWSError] =
+      maybeContentLengthCondition match {
+        case Some(ContentLengthRange(minMaybe, maxMaybe)) => checkFileSizeConstraints(file.ref.file.length(), minMaybe, maxMaybe)
+        case _                                            => None
+      }
+
+    maybeInvalidContentLength match {
+      case Some(awsError) => BadRequest(invalidRequestBody(awsError.code, awsError.message))
+      case None           => block
+    }
+  }
+
+  private def checkFileSizeConstraints(fileSize: Long, minMaybe: Option[Long], maxMaybe: Option[Long]): Option[AWSError] = {
+    val minErrorMaybe: Option[AWSError] = for {
+      min <- minMaybe
+      if (fileSize < min)
+    } yield AWSError("EntityTooSmall", "Your proposed upload exceeds the maximum allowed size", "n/a")
+
+    minErrorMaybe orElse {
+      for {
+        max <- maxMaybe
+        if (fileSize > max)
+      } yield AWSError("EntityTooLarge", "Your proposed upload is smaller than the minimum allowed size", "n/a")
+    }
+  }
+
+  private def storeAndNotify(form: UploadPostForm, file: MultipartFormData.FilePart[Files.TemporaryFile])
+                            (implicit request: RequestHeader): Unit = {
     val reference = Reference(form.key)
 
     storageService.store(file.ref, reference)
