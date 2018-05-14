@@ -1,5 +1,6 @@
 package controllers
 
+import java.io.File
 import java.nio.file.{Files, Paths}
 
 import akka.actor.ActorSystem
@@ -12,6 +13,7 @@ import play.api.test.Helpers.{route, _}
 import play.api.test.{FakeRequest, Helpers}
 import services.FileStorageService
 import uk.gov.hmrc.play.test.UnitSpec
+
 import scala.concurrent.duration._
 
 class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
@@ -24,10 +26,8 @@ class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
     "download a file" in {
       Given("a reference to a previously stored file")
-
-      val path = Paths.get("it/resources/my-it-file.txt")
-      val file = Files.createFile(path).toFile
-      Files.write(path, "Integration test file contents".getBytes)
+      val file: File = Files.createTempFile(Paths.get("it/resources"), "my-it-file", "txt").toFile
+      Files.write(file.toPath, "Integration test file contents".getBytes)
 
       val storageService = app.injector.instanceOf[FileStorageService]
       storageService.store(new TemporaryFile(file), Reference("my-it-file"))
@@ -43,7 +43,7 @@ class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       downloadContents shouldBe "Integration test file contents"
 
       And("the file is no longer in its original location")
-      Files.exists(path) shouldBe false
+      Files.exists(file.toPath) shouldBe false
     }
 
     "return Not Found for invalid file reference" in {
