@@ -41,6 +41,9 @@ class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       status(downloadResponse) shouldBe 200
       val downloadContents: String = bodyOf(downloadResponse)
       downloadContents shouldBe "Integration test file contents"
+
+      And("the file is no longer in its original location")
+      Files.exists(path) shouldBe false
     }
 
     "return Not Found for invalid file reference" in {
