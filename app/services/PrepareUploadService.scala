@@ -47,12 +47,17 @@ class PrepareUploadService @Inject()() {
         Seq(
           Json.arr(
             "content-length-range",
-            settings.minimumFileSize,
-            settings.maximumFileSize
+            settings.minimumFileSize.foldLeft(PrepareUploadService.minFileSize)(math.max),
+            settings.maximumFileSize.foldLeft(PrepareUploadService.maxFileSize)(math.min)
           )
         )
       )
     )
     Policy(json)
   }
+}
+
+object PrepareUploadService {
+  val minFileSize = 0
+  val maxFileSize = 104857600
 }
