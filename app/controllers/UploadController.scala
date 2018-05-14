@@ -80,13 +80,13 @@ class UploadController @Inject()(
     val minErrorMaybe: Option[AWSError] = for {
       min <- minMaybe
       if (fileSize < min)
-    } yield AWSError("EntityTooSmall", "Your proposed upload exceeds the maximum allowed size", "n/a")
+    } yield AWSError("EntityTooSmall", "Your proposed upload is smaller than the minimum allowed size", "n/a")
 
     minErrorMaybe orElse {
       for {
         max <- maxMaybe
         if (fileSize > max)
-      } yield AWSError("EntityTooLarge", "Your proposed upload is smaller than the minimum allowed size", "n/a")
+      } yield AWSError("EntityTooLarge", "Your proposed upload exceeds the maximum allowed size", "n/a")
     }
   }
 

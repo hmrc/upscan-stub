@@ -8,14 +8,15 @@ import org.scalatest.GivenWhenThen
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.Writeable
 import play.api.libs.Files.TemporaryFile
+import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.MultipartFormData
-import play.api.test.Helpers.route
+import play.api.test.Helpers.{contentAsJson, route}
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import uk.gov.hmrc.play.test.UnitSpec
 import utils.Implicits.Base64StringOps
 
 import scala.concurrent.duration._
-import scala.xml.Elem
+import scala.xml.{Elem, XML}
 
 class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
 
@@ -134,5 +135,91 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
     }
 
+    "return Bad Request when the uploaded file size is smaller than the minimum limit in the supplied policy" in {
+      Given("an invalid request containing invalid file size limits in the policy")
+      val policy = policyWithContentLengthRange(100, 1000)
+
+      val testFile = new File(getClass.getResource("/text-to-upload.txt").toURI)
+      val filePart =
+        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
+      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
+        dataParts = Map(
+          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
+          "X-Amz-Credential"        -> Seq("some-credentials"),
+          "X-Amz-Date"              -> Seq("some-date"),
+          "X-Amz-Signature"         -> Seq("some-signature"),
+          "policy"                  -> Seq(Json.stringify(policy).base64encode),
+          "acl"                     -> Seq("some-acl"),
+          "key"                     -> Seq("file-key"),
+          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+        ),
+        files    = Seq(filePart),
+        badParts = Nil
+      )
+
+      val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
+
+      When("the request is POSTed to the /upscan/upload")
+      implicit val writer = utils.MultipartFormDataWritable.writeable
+      val uploadResponse  = route(app, uploadRequest).get
+
+      Then("a Bad Request response should be returned")
+      status(uploadResponse) shouldBe 400
+
+      And("the response body should contain the AWS XML error")
+      val responseBody = bodyOf(uploadResponse)
+      val responseBodyAsXml = XML.loadString(responseBody)
+
+      (responseBodyAsXml \\ "Error").nonEmpty      shouldBe true
+      (responseBodyAsXml \\ "Code").head.text      shouldBe "EntityTooSmall"
+      (responseBodyAsXml \\ "Message").head.text   shouldBe "Your proposed upload is smaller than the minimum allowed size"
+    }
+
+    "return Bad Request when the uploaded file size exceeds the maximum limit in the supplied policy" in {
+      Given("an invalid request containing invalid file size limits in the policy")
+      val policy = policyWithContentLengthRange(5, 10)
+
+      val testFile = new File(getClass.getResource("/text-to-upload.txt").toURI)
+      val filePart =
+        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
+      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
+        dataParts = Map(
+          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
+          "X-Amz-Credential"        -> Seq("some-credentials"),
+          "X-Amz-Date"              -> Seq("some-date"),
+          "X-Amz-Signature"         -> Seq("some-signature"),
+          "policy"                  -> Seq(Json.stringify(policy).base64encode),
+          "acl"                     -> Seq("some-acl"),
+          "key"                     -> Seq("file-key"),
+          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+        ),
+        files    = Seq(filePart),
+        badParts = Nil
+      )
+
+      val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
+
+      When("the request is POSTed to the /upscan/upload")
+      implicit val writer = utils.MultipartFormDataWritable.writeable
+      val uploadResponse  = route(app, uploadRequest).get
+
+      Then("a Bad Request response should be returned")
+      status(uploadResponse) shouldBe 400
+
+      And("the response body should contain the AWS XML error")
+      val responseBody = bodyOf(uploadResponse)
+      val responseBodyAsXml = XML.loadString(responseBody)
+
+      (responseBodyAsXml \\ "Error").nonEmpty      shouldBe true
+      (responseBodyAsXml \\ "Code").head.text      shouldBe "EntityTooLarge"
+      (responseBodyAsXml \\ "Message").head.text   shouldBe "Your proposed upload exceeds the maximum allowed size"
+    }
   }
+
+  private def policyWithContentLengthRange(min: Long, max: Long): JsValue =
+    Json.obj(
+      "conditions" -> JsArray(
+        Seq(Json.arr("content-length-range", min, max))
+      )
+    )
 }
