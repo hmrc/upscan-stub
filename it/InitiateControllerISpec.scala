@@ -10,7 +10,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration._
 
-class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
+class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
 
   implicit val actorSystem: ActorSystem        = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
