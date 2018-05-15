@@ -24,11 +24,11 @@ class UploadController @Inject()(
 
   private val uploadForm: Form[UploadPostForm] = Form(
     mapping(
-      "X-Amz-Algorithm"         -> nonEmptyText,
-      "X-Amz-Credential"        -> nonEmptyText,
-      "X-Amz-Date"              -> nonEmptyText,
+      "x-amz-algorithm"         -> nonEmptyText,
+      "x-amz-credential"        -> nonEmptyText,
+      "x-amz-date"              -> nonEmptyText,
       "policy"                  -> nonEmptyText,
-      "X-Amz-Signature"         -> nonEmptyText,
+      "x-amz-signature"         -> nonEmptyText,
       "acl"                     -> nonEmptyText,
       "key"                     -> nonEmptyText,
       "x-amz-meta-callback-url" -> nonEmptyText

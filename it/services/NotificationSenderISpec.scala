@@ -53,7 +53,7 @@ class NotificationSenderISpec
           |	"callbackUrl": "http://localhost:9570/callback",
           |	"minimumFileSize" : 0,
           |	"maximumFileSize" : 1024,
-          |	"expectedMimeType": "application/xml"
+          |	"expectedContentType": "application/xml"
           |}
         """.stripMargin)
 
@@ -126,7 +126,7 @@ class NotificationSenderISpec
                                       |	"callbackUrl": "http://localhost:9570/callback",
                                       |	"minimumFileSize" : 0,
                                       |	"maximumFileSize" : 1024,
-                                      |	"expectedMimeType": "application/xml"
+                                      |	"expectedContentType": "application/xml"
                                       |}
                                     """.stripMargin)
 

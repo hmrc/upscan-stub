@@ -33,11 +33,11 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
@@ -64,11 +64,11 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"  -> Seq("some-algorithm"),
-          "X-Amz-Credential" -> Seq("some-credentials"),
-          "X-Amz-Date"       -> Seq("some-date"),
+          "x-amz-algorithm"  -> Seq("some-algorithm"),
+          "x-amz-credential" -> Seq("some-credentials"),
+          "x-amz-date"       -> Seq("some-date"),
           "policy"           -> Seq("{\"policy\":null}".base64encode),
-          "X-Amz-Signature"  -> Seq("some-signature"),
+          "x-amz-signature"  -> Seq("some-signature"),
           "acl"              -> Seq("some-acl"),
           "key"              -> Seq("file-key")
         ),
@@ -101,11 +101,11 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       Given("a valid POST multipart form request containing NO file")
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
@@ -143,10 +143,10 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "policy"                  -> Seq(Json.stringify(policy).base64encode),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
@@ -183,10 +183,10 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "policy"                  -> Seq(Json.stringify(policy).base64encode),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
