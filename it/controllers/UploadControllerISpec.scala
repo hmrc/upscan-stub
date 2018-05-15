@@ -9,7 +9,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.MultipartFormData
-import play.api.test.Helpers.{contentAsJson, route}
+import play.api.test.Helpers.route
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import uk.gov.hmrc.play.test.UnitSpec
 import utils.Implicits.Base64StringOps
@@ -166,12 +166,12 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       status(uploadResponse) shouldBe 400
 
       And("the response body should contain the AWS XML error")
-      val responseBody = bodyOf(uploadResponse)
+      val responseBody      = bodyOf(uploadResponse)
       val responseBodyAsXml = XML.loadString(responseBody)
 
-      (responseBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (responseBodyAsXml \\ "Code").head.text      shouldBe "EntityTooSmall"
-      (responseBodyAsXml \\ "Message").head.text   shouldBe "Your proposed upload is smaller than the minimum allowed size"
+      (responseBodyAsXml \\ "Error").nonEmpty    shouldBe true
+      (responseBodyAsXml \\ "Code").head.text    shouldBe "EntityTooSmall"
+      (responseBodyAsXml \\ "Message").head.text shouldBe "Your proposed upload is smaller than the minimum allowed size"
     }
 
     "return Bad Request when the uploaded file size exceeds the maximum limit in the supplied policy" in {
@@ -206,12 +206,12 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       status(uploadResponse) shouldBe 400
 
       And("the response body should contain the AWS XML error")
-      val responseBody = bodyOf(uploadResponse)
+      val responseBody      = bodyOf(uploadResponse)
       val responseBodyAsXml = XML.loadString(responseBody)
 
-      (responseBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (responseBodyAsXml \\ "Code").head.text      shouldBe "EntityTooLarge"
-      (responseBodyAsXml \\ "Message").head.text   shouldBe "Your proposed upload exceeds the maximum allowed size"
+      (responseBodyAsXml \\ "Error").nonEmpty    shouldBe true
+      (responseBodyAsXml \\ "Code").head.text    shouldBe "EntityTooLarge"
+      (responseBodyAsXml \\ "Message").head.text shouldBe "Your proposed upload exceeds the maximum allowed size"
     }
   }
 
