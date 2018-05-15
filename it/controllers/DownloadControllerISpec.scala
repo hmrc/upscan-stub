@@ -26,7 +26,7 @@ class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
     "download a file" in {
       Given("a reference to a previously stored file")
-      val file: File = Files.createTempFile(Paths.get("it/resources"), "my-it-file", "txt").toFile
+      val file: File = Files.createTempFile(Paths.get("/tmp"), "my-it-file", "txt").toFile
       Files.write(file.toPath, "Integration test file contents".getBytes)
 
       val storageService = app.injector.instanceOf[FileStorageService]
