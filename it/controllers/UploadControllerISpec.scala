@@ -6,7 +6,6 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.GivenWhenThen
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.http.Writeable
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.MultipartFormData
