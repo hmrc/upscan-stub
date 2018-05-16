@@ -36,11 +36,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
@@ -90,11 +90,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
@@ -143,10 +143,10 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, temporaryFile)
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
         ),
         files    = Seq(filePart),
@@ -184,11 +184,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Given("a valid form containing a NO file")
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "X-Amz-Algorithm"         -> Seq("some-algorithm"),
-          "X-Amz-Credential"        -> Seq("some-credentials"),
-          "X-Amz-Date"              -> Seq("some-date"),
+          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("some-date"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
-          "X-Amz-Signature"         -> Seq("some-signature"),
+          "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("some-acl"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")

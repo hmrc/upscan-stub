@@ -1,7 +1,7 @@
 package services
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit.DAYS
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneOffset}
 import java.util.UUID
 
 import javax.inject.Inject
@@ -9,6 +9,8 @@ import model._
 import play.api.libs.json.{JsArray, JsObject, Json}
 
 class PrepareUploadService @Inject()() {
+  private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC)
+
   case class Policy(json: JsObject) {
     import utils.Implicits.Base64StringOps
     def asBase64String(): String = Json.stringify(json).base64encode
@@ -23,23 +25,21 @@ class PrepareUploadService @Inject()() {
       uploadRequest = UploadFormTemplate(
         href = uploadUrl,
         fields = Map(
-          "X-Amz-Algorithm"         -> "AWS4-HMAC-SHA256",
-          "X-Amz-Expiration"        -> expiration(),
-          "X-Amz-Signature"         -> "xxxx",
-          "X-Amz-Date"              -> "20111015T080000Z",
-          "key"                     -> reference.value,
           "acl"                     -> "private",
-          "X-Amz-Credential"        -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
+          "key"                     -> reference.value,
+          "policy"                  -> policy.asBase64String,
+          "x-amz-algorithm"         -> "AWS4-HMAC-SHA256",
+          "x-amz-credential"        -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
+          "x-amz-date"              -> dateTimeFormatter.format(Instant.now),
           "x-amz-meta-callback-url" -> settings.callbackUrl,
-          "policy"                  -> policy.asBase64String
-        )
+          "x-amz-signature"         -> "xxxx"
+        ) ++
+          settings.expectedContentType.map{"Content-Type" -> _}
       )
     )
   }
 
   private def generateReference(): Reference = Reference(UUID.randomUUID().toString)
-
-  private def expiration(): String = Instant.now().plus(1, DAYS).toString
 
   private def toPolicy(settings: UploadSettings): Policy = {
     val json = Json.obj(

@@ -35,6 +35,22 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
         max shouldBe Some(104857600)
       }
     }
+
+    "include all required fields" in {
+      val result: PreparedUpload =
+        testInstance.prepareUpload(uploadSettings, "uploadUrl")
+
+      result.uploadRequest.fields.keySet should contain theSameElementsAs Set(
+        "acl",
+        "key",
+        "policy",
+        "x-amz-algorithm",
+        "x-amz-credential",
+        "x-amz-date",
+        "x-amz-meta-callback-url",
+        "x-amz-signature"
+      )
+    }
   }
 
   private def withMinMaxFileSizesInPolicyConditions[T](preparedUpload: PreparedUpload)(block: (Option[Long], Option[Long]) => T): T = {
