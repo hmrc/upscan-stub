@@ -36,12 +36,12 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("some-date"),
+          "x-amz-date"              -> Seq("20180517T113023Z"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
           "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("some-acl"),
+          "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
         ),
@@ -90,12 +90,12 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("some-date"),
+          "x-amz-date"              -> Seq("20180517T113023Z"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
           "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("some-acl"),
+          "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
         ),
@@ -143,9 +143,9 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, temporaryFile)
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("some-date"),
+          "x-amz-date"              -> Seq("20180517T113023Z"),
           "x-amz-signature"         -> Seq("some-signature"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
         ),
@@ -184,12 +184,12 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Given("a valid form containing a NO file")
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
-          "x-amz-algorithm"         -> Seq("some-algorithm"),
+          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("some-date"),
+          "x-amz-date"              -> Seq("20180517T113023Z"),
           "policy"                  -> Seq("{\"policy\":null}".base64encode),
           "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("some-acl"),
+          "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
         ),

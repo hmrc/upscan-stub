@@ -6,6 +6,7 @@ import javax.inject.Inject
 import model._
 import play.api.data.Form
 import play.api.data.Forms._
+import play.api.data.validation.Constraints.pattern
 import play.api.libs.Files
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
@@ -24,12 +25,12 @@ class UploadController @Inject()(
 
   private val uploadForm: Form[UploadPostForm] = Form(
     mapping(
-      "x-amz-algorithm"         -> nonEmptyText,
+      "x-amz-algorithm"         -> nonEmptyText.verifying("Invalid algorithm", {"AWS4-HMAC-SHA256" == _}),
       "x-amz-credential"        -> nonEmptyText,
-      "x-amz-date"              -> nonEmptyText,
+      "x-amz-date"              -> nonEmptyText.verifying(pattern("^[0-9]{8}T[0-9]{6}Z$".r, "Invalid x-amz-date format")),
       "policy"                  -> nonEmptyText,
       "x-amz-signature"         -> nonEmptyText,
-      "acl"                     -> nonEmptyText,
+      "acl"                     -> nonEmptyText.verifying("Invalid acl", {"private" == _}),
       "key"                     -> nonEmptyText,
       "x-amz-meta-callback-url" -> nonEmptyText
     )(UploadPostForm.apply)(UploadPostForm.unapply)
