@@ -32,6 +32,20 @@ Additionally, the service will make a callback in the format documented in [upsc
 It is possible to test the uploaded of a virus-infected file using a test file included in the ```upscan-stub``` project. Uploading the following file will trigger a quarantined file callback:
 ```test/resources/eicar-standard-av-test-file.txt```
 
+##### Sophos Antivirus Scanner collisions
+If you're using the [Sophos Home](http://home.sophos.com) antivirus application on your laptop, then you may find the software automatically quarantines the virus infected test file mentioned above.
+###### 1. Quarantining virus test resources
+Each time you pull from git, Sophos may delete ```test/resources/eicar-standard-av-test-file.txt```.
+To avoid this, you can whitelist the file on the [Sophos Dashboard](https://cloud.sophos.com/manage/home).
+**Note:** you will need to whitelist the copy of the file built to `/target` as well. i.e. both of:
+```
+test/resources/eicar-standard-av-test-file.txt
+target/scala-2.11/test-classes/eicar-standard-av-test-file.txt
+```
+###### 2. Failing virus tests
+Some of the `upscan-stub` integration tests may also fail due to collisions with Sophos.
+Currently there is no workaround other than to disable the tests, or Sophos, when running locally.
+
 ## Running locally
 Start your ```upscan-stub``` service on port 9570 with the following command: ```sbt "run 9570"```
 
@@ -42,4 +56,5 @@ Alternatively, the Service Manager profile for Upscan can be started with:
 ```
 
 ### Using ```upscan-listener```
-The flow of calls relies upon a "listening" endpoint within your service to receive asynchronous notification once your file has been virus scanned and is ready to downloaded within  your service. If you require a service to capture callbacks whilst developing your own service, you can use the helper service [```upscan-listener```](https://github.com/hmrc/upscan-listener).
+The flow of calls relies upon a "listening" endpoint within your service to receive asynchronous notification once your file has been virus scanned and is ready to downloaded within  your service. 
+If you require a service to capture callbacks whilst developing your own service, you can use the helper service [```upscan-listener```](https://github.com/hmrc/upscan-listener).
