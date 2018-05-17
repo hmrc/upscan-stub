@@ -72,7 +72,8 @@ class NotificationSenderISpec
       val fileReference = preparedUpload.uploadRequest.fields.get("key").get
 
       And("an uploaded request is posted to the returned /upload endpoint")
-      val file: File = Files.createTempFile(Paths.get("/tmp"), "my-it-file", "txt").toFile
+      val file: File = Files.createTempFile(Paths.get("/tmp"), "my-it-file", ".txt").toFile
+      file.deleteOnExit
       Files.write(file.toPath, "End to end notification test contents".getBytes)
 
       val filePart =
@@ -146,7 +147,8 @@ class NotificationSenderISpec
 
       And("an uploaded request is posted to the returned /upload endpoint")
       val infectedContents = """X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"""
-      val file: File       = Files.createTempFile(Paths.get("/tmp"), "my-infected-file", "txt").toFile
+      val file: File       = Files.createTempFile(Paths.get("/tmp"), "my-infected-file", ".txt").toFile
+      file.deleteOnExit
       Files.write(file.toPath, infectedContents.getBytes)
 
       val filePart =
