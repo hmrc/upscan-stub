@@ -10,6 +10,7 @@ import model.PreparedUpload
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, GivenWhenThen}
+import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
@@ -40,6 +41,8 @@ class NotificationSenderISpec
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timeout: akka.util.Timeout      = 10.seconds
 
+  val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
+
   "UpscanStub" should {
     "initiate a request, upload a file, make a callback, and download a non-infected file" in {
 
@@ -58,7 +61,7 @@ class NotificationSenderISpec
         """.stripMargin)
 
       val initiateRequest =
-        FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+        FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("a request is posted to the /initiate endpoint")
       val initiateResponse = route(fakeApplication, initiateRequest).get
@@ -132,7 +135,7 @@ class NotificationSenderISpec
                                     """.stripMargin)
 
       val initiateRequest =
-        FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+        FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("a request is posted to the /initiate endpoint")
       val initiateResponse = route(fakeApplication, initiateRequest).get

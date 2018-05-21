@@ -8,6 +8,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 class PrepareUploadServiceSpec extends UnitSpec with Matchers {
   "PrepareUploadService.prepareUpload" should {
     val testInstance = new PrepareUploadService()
+    val userAgent = Some("PrepareUploadServiceSpec")
 
     val uploadSettings = UploadSettings(
       callbackUrl = "callbackUrl",
@@ -18,7 +19,7 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
 
     "include supplied file size constraints in the policy" in {
       val result: PreparedUpload =
-        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = Some(10), maximumFileSize = Some(100)), "uploadUrl")
+        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = Some(10), maximumFileSize = Some(100)), "uploadUrl", userAgent)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(10)
@@ -28,7 +29,7 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
 
     "include default file size constraints in the policy" in {
       val result: PreparedUpload =
-        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = None, maximumFileSize = None), "uploadUrl")
+        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = None, maximumFileSize = None), "uploadUrl", userAgent)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(0)
@@ -38,7 +39,7 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
 
     "include all required fields" in {
       val result: PreparedUpload =
-        testInstance.prepareUpload(uploadSettings, "uploadUrl")
+        testInstance.prepareUpload(uploadSettings, "uploadUrl", userAgent)
 
       result.uploadRequest.fields.keySet should contain theSameElementsAs Set(
         "acl",
@@ -48,6 +49,7 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
         "x-amz-credential",
         "x-amz-date",
         "x-amz-meta-callback-url",
+        "x-amz-meta-consuming-service",
         "x-amz-signature"
       )
     }

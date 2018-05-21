@@ -7,6 +7,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{GivenWhenThen, Matchers}
+import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Result
 import play.api.test.FakeRequest
@@ -22,6 +23,8 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timeout: akka.util.Timeout      = 10.seconds
 
+  val requestHeaders = ((USER_AGENT, "InitiateControllerSpec"))
+
   "UpscanController" should {
 
     "return expected JSON for prepare upload when passed valid request" in {
@@ -35,7 +38,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
           |}
         """.stripMargin)
 
-      val request = FakeRequest().withBody(validJsonBody)
+      val request = FakeRequest().withHeaders(requestHeaders).withBody(validJsonBody)
 
       When("the prepare upload method is called")
       val preparedUpload = PreparedUpload(
@@ -43,7 +46,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
         UploadFormTemplate("http://myservice.com/upload", Map.empty)
       )
       val prepareService = mock[PrepareUploadService]
-      Mockito.when(prepareService.prepareUpload(any(), any())).thenReturn(preparedUpload)
+      Mockito.when(prepareService.prepareUpload(any(), any(), any())).thenReturn(preparedUpload)
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
       val result: Future[Result] = controller.prepareUpload()(request)
 
@@ -73,7 +76,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
           |}
         """.stripMargin)
 
-      val request = FakeRequest().withBody(invalidJsonBody)
+      val request = FakeRequest().withHeaders(requestHeaders).withBody(invalidJsonBody)
 
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]
@@ -88,7 +91,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
     "return expected error for prepare upload when passed non-JSON request" in {
       Given("a request containing an invalid JSON body")
       val invalidStringBody: String = "This is an invalid body"
-      val request                   = FakeRequest().withBody(invalidStringBody)
+      val request                   = FakeRequest().withHeaders(requestHeaders).withBody(invalidStringBody)
 
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]

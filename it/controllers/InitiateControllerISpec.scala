@@ -5,6 +5,7 @@ import akka.stream.ActorMaterializer
 import model.PreparedUpload
 import org.scalatest.GivenWhenThen
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.http.HeaderNames.USER_AGENT
 import play.api.http.Status
 import play.api.libs.json.{JsValue, Json}
 import play.api.test.Helpers.{contentAsJson, route}
@@ -18,6 +19,8 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
   implicit val actorSystem: ActorSystem        = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timeout: akka.util.Timeout      = 10.seconds
+
+  val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
   "InitiateController /initiate" should {
 
@@ -34,7 +37,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         """.stripMargin)
 
       val initiateRequest =
-        FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+        FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("a request is posted to the /initiate endpoint")
       val initiateResponse = route(app, initiateRequest).get
@@ -49,7 +52,31 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       (responseJson \ "uploadRequest" \ "href").as[String] shouldBe "http:///upscan/upload"
       (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-callback-url")
         .as[String] shouldBe "http://localhost:9570/callback"
+      (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
+        .as[String] shouldBe "InitiateControllerISpec"
       (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
+    }
+
+    "respond with 403 when the User Agent header is missing from the request" in {
+      val postBodyJson = Json.parse(
+        """
+          |{
+          |	"callbackUrl": "http://localhost:9570/callback",
+          |	"minimumFileSize" : 0,
+          |	"maximumFileSize" : 1024,
+          |	"expectedMimeType": "application/xml"
+          |}
+        """.stripMargin)
+
+      Given("a request without a User Agent header")
+      val initiateRequest =
+        FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+
+      When("a request is posted to the /initiate endpoint")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("the response should indicate the request is Forbidden")
+      status(initiateResponse) shouldBe 403
     }
 
     "respond with expected error JSON when passed a invalid request" in {
@@ -64,7 +91,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         """.stripMargin)
 
       val initiateRequest =
-        FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+        FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("a request is posted to the /initiate endpoint")
       val initiateResponse = route(app, initiateRequest).get
@@ -86,7 +113,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         "expectedContentType" -> "pdf"
       )
 
-      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("the request is POSTed to /upscan/initiate")
       val initiateResponse = route(app, initiateRequest).get
@@ -108,7 +135,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         "expectedContentType" -> "pdf"
       )
 
-      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("the request is POSTed to /upscan/initiate")
       val initiateResponse = route(app, initiateRequest).get
@@ -132,7 +159,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         "expectedContentType" -> "pdf"
       )
 
-      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("the request is POSTed to /upscan/initiate")
       val initiateResponse = route(app, initiateRequest).get
@@ -150,7 +177,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         "expectedContentType" -> "pdf"
       )
 
-      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", FakeHeaders(), postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
 
       When("the request is POSTed to /upscan/initiate")
       val initiateResponse = route(app, initiateRequest).get

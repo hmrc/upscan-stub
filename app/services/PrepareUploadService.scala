@@ -16,7 +16,7 @@ class PrepareUploadService @Inject()() {
     def asBase64String(): String = Json.stringify(json).base64encode
   }
 
-  def prepareUpload(settings: UploadSettings, uploadUrl: String): PreparedUpload = {
+  def prepareUpload(settings: UploadSettings, uploadUrl: String, consumingService: Option[String]): PreparedUpload = {
     val reference = generateReference()
     val policy = toPolicy(settings)
 
@@ -33,8 +33,8 @@ class PrepareUploadService @Inject()() {
           "x-amz-date"              -> dateTimeFormatter.format(Instant.now),
           "x-amz-meta-callback-url" -> settings.callbackUrl,
           "x-amz-signature"         -> "xxxx"
-        ) ++
-          settings.expectedContentType.map{"Content-Type" -> _}
+        ) ++ settings.expectedContentType.map{"Content-Type" -> _}
+          ++ consumingService.map{"x-amz-meta-consuming-service" -> _}
       )
     )
   }
