@@ -1,5 +1,6 @@
 package controllers
 
+import filters.UserAgentFilter
 import javax.inject.Inject
 import model.UploadSettings
 import play.api.Logger
@@ -14,26 +15,27 @@ import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import scala.concurrent.{ExecutionContext, Future}
 
 class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(implicit ec: ExecutionContext)
-    extends BaseController {
+    extends BaseController with UserAgentFilter {
 
   implicit val uploadSettingsReads: Reads[UploadSettings] = (
     (JsPath \ "callbackUrl").read[String] and
       (JsPath \ "minimumFileSize").readNullable[Int](min(PrepareUploadService.minFileSize)) and
       (JsPath \ "maximumFileSize").readNullable[Int](min(PrepareUploadService.minFileSize) keepAnd max(PrepareUploadService.maxFileSize)) and
       (JsPath \ "expectedContentType").readNullable[String]
-    )(UploadSettings.apply _)
+    ) (UploadSettings.apply _)
     .filter(ValidationError("Maximum file size must be equal or greater than minimum file size"))(
       settings =>
         settings.minimumFileSize.getOrElse(0) <= settings.maximumFileSize.getOrElse(PrepareUploadService.maxFileSize)
     )
 
-  def prepareUpload(): Action[JsValue] =
+  def prepareUpload(): Action[JsValue] = withUserAgentHeader {
     Action.async(parse.json) { implicit request =>
       withJsonBody[UploadSettings] { (fileUploadDetails: UploadSettings) =>
         Logger.debug(s"Processing request: [$fileUploadDetails].")
         val result =
-          prepareUploadService.prepareUpload(fileUploadDetails, routes.UploadController.upload().absoluteURL())
+          prepareUploadService.prepareUpload(fileUploadDetails, routes.UploadController.upload().absoluteURL, request.headers.get(USER_AGENT))
         Future.successful(Ok(Json.toJson(result)))
       }
     }
+  }
 }
