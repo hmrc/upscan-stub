@@ -27,13 +27,13 @@ object ReadyCallbackBody {
   }
 }
 
-case class FailedCallbackBody(reference: Reference, details: String, fileStatus: FileStatus = FailedFileStatus)
+case class FailedCallbackBody(reference: Reference, details: ErrorDetails, fileStatus: FileStatus = FailedFileStatus)
 object FailedCallbackBody {
   implicit val writesFailedCallback: Writes[FailedCallbackBody] = new Writes[FailedCallbackBody] {
     def writes(body: FailedCallbackBody): JsObject = Json.obj(
-      "reference"  -> body.reference.value,
-      "details"    -> body.details,
-      "fileStatus" -> body.fileStatus
+      "reference"      -> body.reference.value,
+      "fileStatus"     -> body.fileStatus,
+      "failureDetails" -> body.details
     )
   }
 }
@@ -52,6 +52,12 @@ object FileStatus {
   implicit val fileStatusWrites: Writes[FileStatus] = new Writes[FileStatus] {
     override def writes(o: FileStatus): JsValue = JsString(o.status)
   }
+}
+
+case class ErrorDetails(failureReason: String, message: String)
+
+object ErrorDetails {
+  implicit val formatsErrorDetails: Format[ErrorDetails] = Json.format[ErrorDetails]
 }
 
 class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: ExecutionContext)
@@ -81,7 +87,8 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
   private def notifyFailedCallback(quarantinedFile: QuarantinedFile): Future[Unit] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrier()
-    val callback                   = FailedCallbackBody(quarantinedFile.reference, quarantinedFile.error)
+    val errorDetails               = ErrorDetails("QUARANTINED", quarantinedFile.error)
+    val callback                   = FailedCallbackBody(quarantinedFile.reference, errorDetails)
 
     httpClient
       .POST[FailedCallbackBody, HttpResponse](quarantinedFile.callbackUrl.toString, callback)

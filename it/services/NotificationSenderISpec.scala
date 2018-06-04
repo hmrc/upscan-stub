@@ -172,8 +172,11 @@ class NotificationSenderISpec
         val expectedCallback = Json
           .obj(
             "reference"  -> fileReference,
-            "details"    -> "Eicar-Test-Signature",
-            "fileStatus" -> "FAILED"
+            "fileStatus" -> "FAILED",
+            "failureDetails" -> Json.obj(
+              "failureReason" -> "QUARANTINED",
+              "message"       -> "Eicar-Test-Signature"
+            )
           )
           .toString
         verify(
