@@ -1,14 +1,13 @@
 package services
 
 import java.net.URL
-
 import javax.inject.Inject
+
 import model._
 import play.api.Logger
 import play.api.libs.json._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import model.JsonWriteHelpers.urlFormats
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -16,26 +15,27 @@ trait NotificationSender {
   def sendNotification(uploadedFile: ProcessedFile): Future[Unit]
 }
 
-case class ReadyCallbackBody(reference: Reference, downloadUrl: URL, fileStatus: FileStatus = ReadyFileStatus)
+case class ReadyCallbackBody(
+  reference: Reference,
+  downloadUrl: URL,
+  fileStatus: FileStatus = ReadyFileStatus,
+  uploadDetails: UploadDetails
+)
+
 object ReadyCallbackBody {
-  implicit val writesReadyCallback: Writes[ReadyCallbackBody] = new Writes[ReadyCallbackBody] {
-    def writes(body: ReadyCallbackBody): JsObject = Json.obj(
-      "reference"   -> body.reference.value,
-      "downloadUrl" -> body.downloadUrl,
-      "fileStatus"  -> body.fileStatus
-    )
-  }
+  import JsonWriteHelpers.urlFormats
+
+  implicit val writesReadyCallback: Writes[ReadyCallbackBody] = Json.writes[ReadyCallbackBody]
 }
 
-case class FailedCallbackBody(reference: Reference, details: ErrorDetails, fileStatus: FileStatus = FailedFileStatus)
+case class FailedCallbackBody(
+  reference: Reference,
+  fileStatus: FileStatus = FailedFileStatus,
+  failureDetails: ErrorDetails
+)
+
 object FailedCallbackBody {
-  implicit val writesFailedCallback: Writes[FailedCallbackBody] = new Writes[FailedCallbackBody] {
-    def writes(body: FailedCallbackBody): JsObject = Json.obj(
-      "reference"      -> body.reference.value,
-      "fileStatus"     -> body.fileStatus,
-      "failureDetails" -> body.details
-    )
-  }
+  implicit val writesFailedCallback: Writes[FailedCallbackBody] = Json.writes[FailedCallbackBody]
 }
 
 sealed trait FileStatus {
@@ -72,7 +72,8 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
 
     implicit val hc: HeaderCarrier = HeaderCarrier()
 
-    val callback = ReadyCallbackBody(uploadedFile.reference, uploadedFile.downloadUrl)
+    val callback =
+      ReadyCallbackBody(uploadedFile.reference, uploadedFile.downloadUrl, uploadDetails = uploadedFile.uploadDetails)
 
     httpClient
       .POST[ReadyCallbackBody, HttpResponse](uploadedFile.callbackUrl.toString, callback)
@@ -88,7 +89,8 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
 
     implicit val hc: HeaderCarrier = HeaderCarrier()
     val errorDetails               = ErrorDetails("QUARANTINED", quarantinedFile.error)
-    val callback                   = FailedCallbackBody(quarantinedFile.reference, errorDetails)
+    val callback =
+      FailedCallbackBody(quarantinedFile.reference, failureDetails = errorDetails)
 
     httpClient
       .POST[FailedCallbackBody, HttpResponse](quarantinedFile.callbackUrl.toString, callback)

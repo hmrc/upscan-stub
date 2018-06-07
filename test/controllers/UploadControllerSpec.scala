@@ -2,10 +2,11 @@ package controllers
 
 import java.io.File
 import java.net.URL
+import java.time.Instant
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import model.{QuarantinedFile, Reference, UploadedFile}
+import model.{QuarantinedFile, Reference, UploadDetails, UploadedFile}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
@@ -16,6 +17,7 @@ import play.api.test.FakeRequest
 import services._
 import uk.gov.hmrc.play.test.UnitSpec
 import utils.Implicits.Base64StringOps
+import utils.InstantProvider
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -26,6 +28,9 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
   implicit val actorSystem: ActorSystem        = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timeout: akka.util.Timeout      = 10.seconds
+
+  private val initiateDate    = Instant.parse("2018-04-24T09:30:00Z")
+  private val instantProvider = new TestInstantProvider(initiateDate)
 
   "UploadController" should {
     "upload a successfully POSTed form and file" in {
@@ -59,7 +64,8 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner)(ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+          ExecutionContext.Implicits.global)
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -70,12 +76,12 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       And("the notification service should be called")
       Mockito
         .verify(notificationProcessor)
-        .enqueueNotification(
-          UploadedFile(
-            new URL("http://mylocalservice.com/callback"),
-            Reference("file-key"),
-            new URL("http:/download/file-key")
-          ))
+        .enqueueNotification(UploadedFile(
+          new URL("http://mylocalservice.com/callback"),
+          Reference("file-key"),
+          new URL("http:/download/file-key"),
+          UploadDetails(initiateDate, "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709")
+        ))
 
       And("a No Content response should be returned")
       val uploadStatus = status(uploadResult)
@@ -113,7 +119,8 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(VirusFound("This test file failed scanning"))
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner)(ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+          ExecutionContext.Implicits.global)
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -159,7 +166,8 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner)(ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+          ExecutionContext.Implicits.global)
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -203,7 +211,8 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner)(ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+          ExecutionContext.Implicits.global)
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -222,5 +231,9 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
     }
+  }
+
+  class TestInstantProvider(instant: Instant) extends InstantProvider {
+    override def now(): Instant = instant
   }
 }

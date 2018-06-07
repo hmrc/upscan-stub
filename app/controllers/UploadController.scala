@@ -1,8 +1,12 @@
 package controllers
 
+import java.io.{File, FileInputStream}
 import java.net.URL
-
+import java.nio.file.Paths
+import java.security.MessageDigest
+import java.time.Instant
 import javax.inject.Inject
+
 import model._
 import play.api.data.Form
 import play.api.data.Forms._
@@ -12,7 +16,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
 import services._
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import utils.ApplicativeHelpers
+import utils.{ApplicativeHelpers, InstantProvider}
 
 import scala.concurrent.ExecutionContext
 import scala.xml.Node
@@ -20,17 +24,18 @@ import scala.xml.Node
 class UploadController @Inject()(
   storageService: FileStorageService,
   notificationQueueProcessor: NotificationQueueProcessor,
-  virusScanner: VirusScanner)(implicit ec: ExecutionContext)
+  virusScanner: VirusScanner,
+  instant: InstantProvider)(implicit ec: ExecutionContext)
     extends BaseController {
 
   private val uploadForm: Form[UploadPostForm] = Form(
     mapping(
-      "x-amz-algorithm"         -> nonEmptyText.verifying("Invalid algorithm", {"AWS4-HMAC-SHA256" == _}),
+      "x-amz-algorithm"         -> nonEmptyText.verifying("Invalid algorithm", { "AWS4-HMAC-SHA256" == _ }),
       "x-amz-credential"        -> nonEmptyText,
       "x-amz-date"              -> nonEmptyText.verifying(pattern("^[0-9]{8}T[0-9]{6}Z$".r, "Invalid x-amz-date format")),
       "policy"                  -> nonEmptyText,
       "x-amz-signature"         -> nonEmptyText,
-      "acl"                     -> nonEmptyText.verifying("Invalid acl", {"private" == _}),
+      "acl"                     -> nonEmptyText.verifying("Invalid acl", { "private" == _ }),
       "key"                     -> nonEmptyText,
       "x-amz-meta-callback-url" -> nonEmptyText
     )(UploadPostForm.apply)(UploadPostForm.unapply)
@@ -41,7 +46,7 @@ class UploadController @Inject()(
       .bindFromRequest()
       .fold(
         formWithErrors => Left(formWithErrors.errors.map(_.toString)),
-        formValues     => Right(formValues)
+        formValues => Right(formValues)
       )
 
     val validatedFile = request.body.file("file").map(Right(_)).getOrElse(Left(Seq("'file' field not found")))
@@ -49,16 +54,17 @@ class UploadController @Inject()(
     val validatedInput = ApplicativeHelpers.product(validatedForm, validatedFile)
 
     validatedInput.fold(
-      errors     => BadRequest(invalidRequestBody("400", errors.mkString(", "))),
-      validInput => withPolicyChecked(validInput._1, validInput._2) {
-        storeAndNotify(validInput._1, validInput._2)
-        NoContent
+      errors => BadRequest(invalidRequestBody("400", errors.mkString(", "))),
+      validInput =>
+        withPolicyChecked(validInput._1, validInput._2) {
+          storeAndNotify(validInput._1, validInput._2)
+          NoContent
       }
     )
   }
 
-  private def withPolicyChecked(form: UploadPostForm, file: MultipartFormData.FilePart[Files.TemporaryFile])
-                               (block: => Result): Result = {
+  private def withPolicyChecked(form: UploadPostForm, file: MultipartFormData.FilePart[Files.TemporaryFile])(
+    block: => Result): Result = {
     import utils.Implicits.Base64StringOps
 
     val policyJson: String = form.policy.base64decode
@@ -67,8 +73,9 @@ class UploadController @Inject()(
 
     val maybeInvalidContentLength: Option[AWSError] =
       maybeContentLengthCondition match {
-        case Some(ContentLengthRange(minMaybe, maxMaybe)) => checkFileSizeConstraints(file.ref.file.length(), minMaybe, maxMaybe)
-        case _                                            => None
+        case Some(ContentLengthRange(minMaybe, maxMaybe)) =>
+          checkFileSizeConstraints(file.ref.file.length(), minMaybe, maxMaybe)
+        case _ => None
       }
 
     maybeInvalidContentLength match {
@@ -77,35 +84,42 @@ class UploadController @Inject()(
     }
   }
 
-  private def checkFileSizeConstraints(fileSize: Long, minMaybe: Option[Long], maxMaybe: Option[Long]): Option[AWSError] = {
+  private def checkFileSizeConstraints(
+    fileSize: Long,
+    minMaybe: Option[Long],
+    maxMaybe: Option[Long]): Option[AWSError] = {
     val minErrorMaybe: Option[AWSError] = for {
       min <- minMaybe
-      if (fileSize < min)
+      if fileSize < min
     } yield AWSError("EntityTooSmall", "Your proposed upload is smaller than the minimum allowed size", "n/a")
 
     minErrorMaybe orElse {
       for {
         max <- maxMaybe
-        if (fileSize > max)
+        if fileSize > max
       } yield AWSError("EntityTooLarge", "Your proposed upload exceeds the maximum allowed size", "n/a")
     }
   }
 
-  private def storeAndNotify(form: UploadPostForm, file: MultipartFormData.FilePart[Files.TemporaryFile])
-                            (implicit request: RequestHeader): Unit = {
+  private def storeAndNotify(form: UploadPostForm, file: MultipartFormData.FilePart[Files.TemporaryFile])(
+    implicit request: RequestHeader): Unit = {
     val reference = Reference(form.key)
 
     storageService.store(file.ref, reference)
+    val storedFile =
+      storageService.get(reference).getOrElse(throw new IllegalStateException("The file should have been stored"))
 
-    val foundVirus: ScanningResult = virusScanner.checkIfClean(
-      storageService.get(reference).getOrElse(throw new IllegalStateException("The file should have been stored")))
+    val foundVirus: ScanningResult = virusScanner.checkIfClean(storedFile)
 
     val fileData = foundVirus match {
-      case Clean =>
+      case Clean => {
+        val fileUploadDetails = UploadDetails(instant.now(), generateChecksum(storedFile.body))
         UploadedFile(
-          callbackUrl = new URL(form.callbackUrl),
-          reference   = reference,
-          downloadUrl = new URL(buildDownloadUrl(reference = reference)))
+          callbackUrl   = new URL(form.callbackUrl),
+          reference     = reference,
+          downloadUrl   = new URL(buildDownloadUrl(reference = reference)),
+          uploadDetails = fileUploadDetails)
+      }
       case VirusFound(details) =>
         QuarantinedFile(
           callbackUrl = new URL(form.callbackUrl),
@@ -127,4 +141,9 @@ class UploadController @Inject()(
       <Resource>NoFileReference</Resource>
       <RequestId>SomeRequestId</RequestId>
     </Error>""")
+
+  def generateChecksum(fileBytes: Array[Byte]): String = {
+    val checksum = MessageDigest.getInstance("SHA-1").digest(fileBytes)
+    checksum.map("%02X" format _).mkString
+  }
 }

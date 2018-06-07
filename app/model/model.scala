@@ -66,7 +66,14 @@ sealed trait ProcessedFile {
   def reference: Reference
 }
 
-case class UploadedFile(callbackUrl: URL, reference: Reference, downloadUrl: URL) extends ProcessedFile
+case class UploadDetails(uploadTimestamp: Instant, checksum: String)
+
+object UploadDetails {
+  implicit val writesUploadDetails: Writes[UploadDetails] = Json.writes[UploadDetails]
+}
+
+case class UploadedFile(callbackUrl: URL, reference: Reference, downloadUrl: URL, uploadDetails: UploadDetails)
+    extends ProcessedFile
 
 case class QuarantinedFile(callbackUrl: URL, reference: Reference, error: String) extends ProcessedFile
 
@@ -89,6 +96,6 @@ object ContentLengthRange {
       if clr == "content-length-range"
       minMaybe = conditions(1).asOpt[Long]
       maxMaybe = conditions(2).asOpt[Long]
-    } yield ContentLengthRange(minMaybe,maxMaybe)
+    } yield ContentLengthRange(minMaybe, maxMaybe)
   }
 }

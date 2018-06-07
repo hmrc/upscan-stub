@@ -2,6 +2,7 @@ package services
 
 import java.io.File
 import java.nio.file.{Files, Paths}
+import java.time.Instant
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -10,7 +11,10 @@ import model.PreparedUpload
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, GivenWhenThen}
+import play.api.Application
 import play.api.http.HeaderNames.USER_AGENT
+import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
@@ -18,7 +22,7 @@ import play.api.test.Helpers.{route, _}
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import play.mvc.Http.Status.OK
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
-import utils.WithWireMock
+import utils.{InstantProvider, WithWireMock}
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
@@ -42,6 +46,11 @@ class NotificationSenderISpec
   implicit val timeout: akka.util.Timeout      = 10.seconds
 
   val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
+
+  override lazy val fakeApplication: Application = new GuiceApplicationBuilder()
+    .bindings(bindModules: _*)
+    .overrides(bind[InstantProvider].to[NotificationSenderInstantProvider])
+    .build()
 
   "UpscanStub" should {
     "initiate a request, upload a file, make a callback, and download a non-infected file" in {
@@ -98,7 +107,11 @@ class NotificationSenderISpec
           .obj(
             "reference"   -> fileReference,
             "downloadUrl" -> s"http:/upscan/download/$fileReference",
-            "fileStatus"  -> "READY"
+            "fileStatus"  -> "READY",
+            "uploadDetails" -> Json.obj(
+              "uploadTimestamp" -> "2018-04-24T09:30:00Z",
+              "checksum"        -> "ADF09C8A5D57DCAD86305571CEDBF9CEA11548A3"
+            )
           )
           .toString
         verify(
@@ -185,4 +198,8 @@ class NotificationSenderISpec
       }
     }
   }
+}
+
+class NotificationSenderInstantProvider extends InstantProvider {
+  override def now(): Instant = Instant.parse("2018-04-24T09:30:00Z")
 }
