@@ -2,6 +2,7 @@ package services
 
 import java.io.File
 import java.nio.file.{Files, Paths}
+import java.time.{Clock, Instant, ZoneId}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -10,7 +11,10 @@ import model.PreparedUpload
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, GivenWhenThen}
+import play.api.Application
 import play.api.http.HeaderNames.USER_AGENT
+import play.api.inject.bind
+import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
@@ -42,6 +46,11 @@ class NotificationSenderISpec
   implicit val timeout: akka.util.Timeout      = 10.seconds
 
   val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
+
+  override lazy val fakeApplication: Application = new GuiceApplicationBuilder()
+    .bindings(bindModules: _*)
+    .overrides(bind[Clock].to[NotificationSenderClock])
+    .build()
 
   "UpscanStub" should {
     "initiate a request, upload a file, make a callback, and download a non-infected file" in {
@@ -98,7 +107,11 @@ class NotificationSenderISpec
           .obj(
             "reference"   -> fileReference,
             "downloadUrl" -> s"http:/upscan/download/$fileReference",
-            "fileStatus"  -> "READY"
+            "fileStatus"  -> "READY",
+            "uploadDetails" -> Json.obj(
+              "uploadTimestamp" -> "2018-04-24T09:30:00Z",
+              "checksum"        -> "2F8A8CEEEC0DC64FFACA269F55E74699BEE881749DE20CDB9631F8FCC72F8A62"
+            )
           )
           .toString
         verify(
@@ -185,4 +198,12 @@ class NotificationSenderISpec
       }
     }
   }
+}
+
+class NotificationSenderClock extends Clock {
+  override def withZone(zone: ZoneId): Clock = ???
+
+  override def getZone: ZoneId = ???
+
+  override def instant(): Instant = Instant.parse("2018-04-24T09:30:00Z")
 }

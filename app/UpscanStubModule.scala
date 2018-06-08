@@ -1,13 +1,16 @@
-import akka.actor.ActorSystem
+import java.time.Clock
 import javax.inject.{Inject, Provider, Singleton}
-import play.api.{Configuration, Environment}
+
+import akka.actor.ActorSystem
 import play.api.inject.{Binding, Module}
+import play.api.{Configuration, Environment}
 import services.{HttpNotificationSender, NotificationQueueProcessor, NotificationSender}
 
 class UpscanStubModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
     bind[NotificationSender].to[HttpNotificationSender],
-    bind[NotificationQueueProcessor].toProvider[NotificationQueueProcessorProvider].in[Singleton]
+    bind[NotificationQueueProcessor].toProvider[NotificationQueueProcessorProvider].in[Singleton],
+    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
   )
 
 }
