@@ -2,7 +2,7 @@ package controllers
 
 import java.io.File
 import java.net.URL
-import java.time.Instant
+import java.time.{Clock, Instant, ZoneId}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -17,11 +17,10 @@ import play.api.test.FakeRequest
 import services._
 import uk.gov.hmrc.play.test.UnitSpec
 import utils.Implicits.Base64StringOps
-import utils.InstantProvider
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.xml.{Elem, XML}
+import scala.xml.Elem
 
 class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
 
@@ -29,8 +28,8 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timeout: akka.util.Timeout      = 10.seconds
 
-  private val initiateDate    = Instant.parse("2018-04-24T09:30:00Z")
-  private val instantProvider = new TestInstantProvider(initiateDate)
+  private val initiateDate = Instant.parse("2018-04-24T09:30:00Z")
+  private val testClock    = new TestClock(initiateDate)
 
   "UploadController" should {
     "upload a successfully POSTed form and file" in {
@@ -64,7 +63,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -80,7 +79,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           new URL("http://mylocalservice.com/callback"),
           Reference("file-key"),
           new URL("http:/download/file-key"),
-          UploadDetails(initiateDate, "DA39A3EE5E6B4B0D3255BFEF95601890AFD80709")
+          UploadDetails(initiateDate, "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")
         ))
 
       And("a No Content response should be returned")
@@ -119,7 +118,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(VirusFound("This test file failed scanning"))
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -166,7 +165,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -211,7 +210,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, instantProvider)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -233,7 +232,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
     }
   }
 
-  class TestInstantProvider(instant: Instant) extends InstantProvider {
-    override def now(): Instant = instant
+  class TestClock(fixedInstant: Instant) extends Clock {
+    override def instant(): Instant = fixedInstant
+
+    override def withZone(zone: ZoneId): Clock = ???
+
+    override def getZone: ZoneId = ???
   }
 }

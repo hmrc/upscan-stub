@@ -2,7 +2,7 @@ package services
 
 import java.io.File
 import java.nio.file.{Files, Paths}
-import java.time.Instant
+import java.time.{Clock, Instant, ZoneId}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -22,7 +22,7 @@ import play.api.test.Helpers.{route, _}
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import play.mvc.Http.Status.OK
 import uk.gov.hmrc.play.test.{UnitSpec, WithFakeApplication}
-import utils.{InstantProvider, WithWireMock}
+import utils.WithWireMock
 
 import scala.collection.JavaConversions._
 import scala.concurrent.duration._
@@ -49,7 +49,7 @@ class NotificationSenderISpec
 
   override lazy val fakeApplication: Application = new GuiceApplicationBuilder()
     .bindings(bindModules: _*)
-    .overrides(bind[InstantProvider].to[NotificationSenderInstantProvider])
+    .overrides(bind[Clock].to[NotificationSenderClock])
     .build()
 
   "UpscanStub" should {
@@ -110,7 +110,7 @@ class NotificationSenderISpec
             "fileStatus"  -> "READY",
             "uploadDetails" -> Json.obj(
               "uploadTimestamp" -> "2018-04-24T09:30:00Z",
-              "checksum"        -> "ADF09C8A5D57DCAD86305571CEDBF9CEA11548A3"
+              "checksum"        -> "2F8A8CEEEC0DC64FFACA269F55E74699BEE881749DE20CDB9631F8FCC72F8A62"
             )
           )
           .toString
@@ -200,6 +200,10 @@ class NotificationSenderISpec
   }
 }
 
-class NotificationSenderInstantProvider extends InstantProvider {
-  override def now(): Instant = Instant.parse("2018-04-24T09:30:00Z")
+class NotificationSenderClock extends Clock {
+  override def withZone(zone: ZoneId): Clock = ???
+
+  override def getZone: ZoneId = ???
+
+  override def instant(): Instant = Instant.parse("2018-04-24T09:30:00Z")
 }

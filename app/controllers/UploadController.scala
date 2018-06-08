@@ -1,10 +1,8 @@
 package controllers
 
-import java.io.{File, FileInputStream}
 import java.net.URL
-import java.nio.file.Paths
 import java.security.MessageDigest
-import java.time.Instant
+import java.time.Clock
 import javax.inject.Inject
 
 import model._
@@ -16,7 +14,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
 import services._
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import utils.{ApplicativeHelpers, InstantProvider}
+import utils.ApplicativeHelpers
 
 import scala.concurrent.ExecutionContext
 import scala.xml.Node
@@ -25,7 +23,7 @@ class UploadController @Inject()(
   storageService: FileStorageService,
   notificationQueueProcessor: NotificationQueueProcessor,
   virusScanner: VirusScanner,
-  instant: InstantProvider)(implicit ec: ExecutionContext)
+  clock: Clock)(implicit ec: ExecutionContext)
     extends BaseController {
 
   private val uploadForm: Form[UploadPostForm] = Form(
@@ -113,7 +111,7 @@ class UploadController @Inject()(
 
     val fileData = foundVirus match {
       case Clean => {
-        val fileUploadDetails = UploadDetails(instant.now(), generateChecksum(storedFile.body))
+        val fileUploadDetails = UploadDetails(clock.instant(), generateChecksum(storedFile.body))
         UploadedFile(
           callbackUrl   = new URL(form.callbackUrl),
           reference     = reference,
@@ -143,7 +141,7 @@ class UploadController @Inject()(
     </Error>""")
 
   def generateChecksum(fileBytes: Array[Byte]): String = {
-    val checksum = MessageDigest.getInstance("SHA-1").digest(fileBytes)
+    val checksum = MessageDigest.getInstance("SHA-256").digest(fileBytes)
     checksum.map("%02X" format _).mkString
   }
 }
