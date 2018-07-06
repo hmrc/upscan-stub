@@ -111,12 +111,17 @@ class UploadController @Inject()(
 
     val fileData = foundVirus match {
       case Clean => {
-        val fileUploadDetails = UploadDetails(clock.instant(), generateChecksum(storedFile.body))
+        val fileUploadDetails = UploadDetails(
+          clock.instant(),
+          generateChecksum(storedFile.body),
+          mapFilenameToMimeType(filename = file.filename),
+          file.filename)
         UploadedFile(
           callbackUrl   = new URL(form.callbackUrl),
           reference     = reference,
           downloadUrl   = new URL(buildDownloadUrl(reference = reference)),
-          uploadDetails = fileUploadDetails)
+          uploadDetails = fileUploadDetails
+        )
       }
       case VirusFound(details) =>
         QuarantinedFile(
@@ -128,6 +133,15 @@ class UploadController @Inject()(
 
     notificationQueueProcessor.enqueueNotification(fileData)
   }
+
+  private def mapFilenameToMimeType(filename: String): String =
+    filename.toLowerCase().substring(filename.indexOf(".") + 1) match {
+      case "jpg"  => "image/jpeg"
+      case "jpeg" => "image/jpeg"
+      case "pdf"  => "application/pdf"
+      case "png"  => "image/png"
+      case _      => s"application/binary"
+    }
 
   private def buildDownloadUrl(reference: Reference)(implicit request: RequestHeader) =
     routes.DownloadController.download(reference.value).absoluteURL()
