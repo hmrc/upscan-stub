@@ -187,7 +187,7 @@ class NotificationSenderISpec
             "reference"  -> fileReference,
             "fileStatus" -> "FAILED",
             "failureDetails" -> Json.obj(
-              "failureReason" -> "QUARANTINED",
+              "failureReason" -> "QUARANTINE",
               "message"       -> "Eicar-Test-Signature"
             )
           )

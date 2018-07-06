@@ -88,7 +88,7 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
   private def notifyFailedCallback(quarantinedFile: QuarantinedFile): Future[Unit] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrier()
-    val errorDetails               = ErrorDetails("QUARANTINED", quarantinedFile.error)
+    val errorDetails               = ErrorDetails("QUARANTINE", quarantinedFile.error)
     val callback =
       FailedCallbackBody(quarantinedFile.reference, failureDetails = errorDetails)
 
