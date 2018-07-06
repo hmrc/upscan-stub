@@ -79,7 +79,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           new URL("http://mylocalservice.com/callback"),
           Reference("file-key"),
           new URL("http:/download/file-key"),
-          UploadDetails(initiateDate, "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855")
+          UploadDetails(initiateDate, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
         ))
 
       And("a No Content response should be returned")
