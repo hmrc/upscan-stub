@@ -89,7 +89,7 @@ class NotificationSenderISpec
       Files.write(file.toPath, "End to end notification test contents".getBytes)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "my-it-file.txt", None, new TemporaryFile(file))
+        new MultipartFormData.FilePart[TemporaryFile]("file", "my-it-file.pdf", None, new TemporaryFile(file))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = formFields,
         files     = Seq(filePart),
@@ -110,7 +110,9 @@ class NotificationSenderISpec
             "fileStatus"  -> "READY",
             "uploadDetails" -> Json.obj(
               "uploadTimestamp" -> "2018-04-24T09:30:00Z",
-              "checksum"        -> "2F8A8CEEEC0DC64FFACA269F55E74699BEE881749DE20CDB9631F8FCC72F8A62"
+              "checksum"        -> "2f8a8ceeec0dc64ffaca269f55e74699bee881749de20cdb9631f8fcc72f8a62",
+              "fileMimeType"    -> "application/pdf",
+              "fileName"        -> "my-it-file.pdf"
             )
           )
           .toString
