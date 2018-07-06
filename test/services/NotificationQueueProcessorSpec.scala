@@ -56,19 +56,22 @@ class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll wit
           new URL("http://127.0.0.1/callback"),
           Reference("REF1"),
           new URL("http://127.0.0.1/download"),
-          UploadDetails(initiateDate, "12345"))
+          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+        )
       val file2 =
         UploadedFile(
           new URL("http://127.0.0.1/callback"),
           Reference("REF2"),
           new URL("http://127.0.0.1/download"),
-          UploadDetails(initiateDate, "12345"))
+          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+        )
       val file3 =
         UploadedFile(
           new URL("http://127.0.0.1/callback"),
           Reference("REF3"),
           new URL("http://127.0.0.1/download"),
-          UploadDetails(initiateDate, "12345"))
+          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+        )
 
       processor.enqueueNotification(file1)
       processor.enqueueNotification(file2)
@@ -93,7 +96,8 @@ class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll wit
           new URL("http://callback"),
           Reference("REF1"),
           new URL("http://download"),
-          UploadDetails(initiateDate, "12345"))
+          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+        )
 
       processor.enqueueNotification(file)
 
@@ -113,7 +117,8 @@ class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll wit
           new URL("http://callback"),
           Reference("REF1"),
           new URL("http://download"),
-          UploadDetails(initiateDate, "12345"))
+          UploadDetails(initiateDate, "12345", "applicaiton/pdf", "test.pdf")
+        )
 
       processor.enqueueNotification(file)
 
