@@ -8,7 +8,7 @@ import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json.{JsPath, JsValue, Json, _}
-import play.api.mvc.Action
+import play.api.mvc.{Action, Result}
 import services.PrepareUploadService
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
@@ -31,11 +31,24 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(i
   def prepareUpload(): Action[JsValue] = withUserAgentHeader {
     Action.async(parse.json) { implicit request =>
       withJsonBody[UploadSettings] { (fileUploadDetails: UploadSettings) =>
-        Logger.debug(s"Processing request: [$fileUploadDetails].")
-        val result =
-          prepareUploadService.prepareUpload(fileUploadDetails, routes.UploadController.upload().absoluteURL, request.headers.get(USER_AGENT))
-        Future.successful(Ok(Json.toJson(result)))
+        withAllowedCallbackProtocol(fileUploadDetails.callbackUrl){
+          Logger.debug(s"Processing request: [$fileUploadDetails].")
+          val result =
+            prepareUploadService.prepareUpload(fileUploadDetails, routes.UploadController.upload().absoluteURL, request.headers.get(USER_AGENT))
+          Future.successful(Ok(Json.toJson(result)))
+        }
       }
+    }
+  }
+
+  private[controllers] def withAllowedCallbackProtocol[A](protocol: String)
+                                                         (block: => Future[Result]): Future[Result]= {
+    if (protocol.startsWith("https") || protocol.startsWith("http://localhost")) {
+      block
+    } else {
+      Logger.warn(s"Invalid callback url: [${protocol}].")
+
+      Future.successful(BadRequest(s"Invalid callback url: [${protocol}]. Protocol must be https."))
     }
   }
 }

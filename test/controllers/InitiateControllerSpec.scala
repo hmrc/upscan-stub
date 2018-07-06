@@ -10,6 +10,7 @@ import org.scalatest.{GivenWhenThen, Matchers}
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Result
+import play.api.mvc.Results.Ok
 import play.api.test.FakeRequest
 import services.PrepareUploadService
 import uk.gov.hmrc.play.test.UnitSpec
@@ -31,7 +32,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       Given("a request containing a valid JSON body")
       val validJsonBody: JsValue = Json.parse("""
           |{
-          |	"callbackUrl": "http://myservice.com/callback",
+          |	"callbackUrl": "https://myservice.com/callback",
           |	"minimumFileSize" : 0,
           |	"maximumFileSize" : 1024,
           |	"expectedMimeType": "application/xml"
@@ -101,6 +102,26 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       Then("an Invalid Media Type response should be returned")
       val responseStatus = status(result)
       responseStatus shouldBe 415
+    }
+
+    "allow https callback urls" in {
+      val controller = new InitiateController(mock[PrepareUploadService])(ExecutionContext.Implicits.global)
+
+      val result = controller.withAllowedCallbackProtocol("https://my.callback.url") {
+        Future.successful(Ok)
+      }
+
+      status(result) shouldBe 200
+    }
+
+    "disallow http callback urls" in {
+      val controller = new InitiateController(mock[PrepareUploadService])(ExecutionContext.Implicits.global)
+
+      val result = controller.withAllowedCallbackProtocol("http://my.callback.url") {
+        Future.failed(new RuntimeException("This block should not have been invoked."))
+      }
+
+      status(result) shouldBe 400
     }
   }
 }
