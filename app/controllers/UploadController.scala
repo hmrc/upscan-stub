@@ -142,6 +142,6 @@ class UploadController @Inject()(
 
   def generateChecksum(fileBytes: Array[Byte]): String = {
     val checksum = MessageDigest.getInstance("SHA-256").digest(fileBytes)
-    checksum.map("%02X" format _).mkString
+    checksum.map("%02x" format _).mkString
   }
 }
