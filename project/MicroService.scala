@@ -8,7 +8,7 @@ import sbt._
 trait MicroService {
 
   import uk.gov.hmrc._
-  import DefaultBuildSettings._
+  import DefaultBuildSettings.{addTestReportOption, defaultSettings, scalaSettings, targetJvm}
   import TestPhases._
   import scoverage.ScoverageKeys
   import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
@@ -55,7 +55,8 @@ trait MicroService {
     .settings(
       Keys.fork in IntegrationTest := false,
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
-      unmanagedResourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it/resources")),
+      unmanagedResourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base =>
+        Seq(base / "it/resources")),
       unmanagedClasspath in IntegrationTest += baseDirectory.value / "resources",
       addTestReportOption(IntegrationTest, "int-test-reports"),
       testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
