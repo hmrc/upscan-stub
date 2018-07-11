@@ -1,5 +1,7 @@
 package controllers
 
+import java.net.URL
+
 import filters.UserAgentFilter
 import javax.inject.Inject
 import model.UploadSettings
@@ -13,6 +15,7 @@ import services.PrepareUploadService
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 
 class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(implicit ec: ExecutionContext)
     extends BaseController with UserAgentFilter {
@@ -43,12 +46,25 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(i
 
   private[controllers] def withAllowedCallbackProtocol[A](callbackUrl: String)
                                                          (block: => Future[Result]): Future[Result]= {
-    if (callbackUrl.startsWith("https") || callbackUrl.startsWith("http://localhost")) {
-      block
-    } else {
-      Logger.warn(s"Invalid callback url: [${callbackUrl}].")
 
-      Future.successful(BadRequest(s"Invalid callback url: [${callbackUrl}]. Protocol must be https."))
+    val isHttps: Try[Boolean] = Try {
+      val url = new URL(callbackUrl)
+      url.getProtocol == "https" || callbackUrl.startsWith("http://localhost")
     }
+
+    isHttps match {
+      case Success(true) => block
+      case Success(false) => {
+        Logger.warn(s"Invalid callback url protocol: [$callbackUrl].")
+
+        Future.successful(BadRequest(s"Invalid callback url protocol: [$callbackUrl]. Protocol must be https."))
+      }
+      case Failure(e) => {
+        Logger.warn(s"Invalid callback url format: [$callbackUrl].")
+
+        Future.successful(BadRequest(s"Invalid callback url format: [$callbackUrl]. [${e.getMessage}]"))
+      }
+    }
+
   }
 }

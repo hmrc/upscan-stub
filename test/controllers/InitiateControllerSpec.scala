@@ -12,6 +12,7 @@ import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Result
 import play.api.mvc.Results.Ok
 import play.api.test.FakeRequest
+import play.api.test.Helpers.contentAsString
 import services.PrepareUploadService
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -122,6 +123,17 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       }
 
       status(result) shouldBe 400
+      contentAsString(result) should include("Invalid callback url protocol")
+    }
+
+    "disallow invalidly formatted callback urls" in {
+      val controller = new InitiateController(mock[PrepareUploadService])(ExecutionContext.Implicits.global)
+
+      val result = controller.withAllowedCallbackProtocol("123") {
+        Future.failed(new RuntimeException("This block should not have been invoked."))
+      }
+      status(result) shouldBe 400
+      contentAsString(result) should include("Invalid callback url format")
     }
   }
 }

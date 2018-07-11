@@ -107,7 +107,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     "respond with supplied file size constraints in the policy" in {
       Given("a valid request with file size constraints")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "myCallbackUrl",
+        "callbackUrl" -> "http://localhost:9570/callback",
         "minimumFileSize" -> 123,
         "maximumFileSize" -> 456,
         "expectedContentType" -> "pdf"
@@ -131,7 +131,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     "respond with default file size constraints in the policy when supplied values are missing" in {
       Given("a valid request with no file size constraints")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "myCallbackUrl",
+        "callbackUrl" -> "http://localhost:9570/callback",
         "expectedContentType" -> "pdf"
       )
 
@@ -153,7 +153,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     "respond with 400 when supplied values are outside of expected limits" in {
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "myCallbackUrl",
+        "callbackUrl" -> "http://localhost:9570/callback",
         "minimumFileSize" -> -10,
         "maximumFileSize" -> 104857600*10,
         "expectedContentType" -> "pdf"
@@ -171,7 +171,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     "respond with 400 when supplied min value is greater than the max value" in {
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "myCallbackUrl",
+        "callbackUrl" -> "http://localhost:9570/callback",
         "minimumFileSize" -> 100,
         "maximumFileSize" -> 90,
         "expectedContentType" -> "pdf"
