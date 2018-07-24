@@ -4,7 +4,7 @@ import java.io.File
 import java.nio.file.Files
 
 import javax.inject.Singleton
-import model.Reference
+import model.FileId
 import org.apache.commons.io.FileUtils
 import play.api.libs.{Files => PlayFiles}
 
@@ -15,12 +15,15 @@ class FileStorageService {
 
   private val tempDirectory: File = Files.createTempDirectory("upscan").toFile
 
-  def store(temporaryFile: PlayFiles.TemporaryFile, reference: Reference): Unit =
-    temporaryFile.moveTo(buildFileLocation(reference))
+  def store(temporaryFile: PlayFiles.TemporaryFile): FileId = {
+    val fileId = FileId.generate()
+    temporaryFile.moveTo(buildFileLocation(fileId))
+    fileId
+  }
 
-  def get(reference: Reference): Option[StoredFile] =
-    for { file <- Some(buildFileLocation(reference)) if file.exists() && file.isFile && file.canRead } yield
+  def get(fileId: FileId): Option[StoredFile] =
+    for { file <- Some(buildFileLocation(fileId)) if file.exists() && file.isFile && file.canRead } yield
       StoredFile(FileUtils.readFileToByteArray(file))
 
-  private def buildFileLocation(reference: Reference) = new File(tempDirectory, reference.value)
+  private def buildFileLocation(reference: FileId) = new File(tempDirectory, reference.value)
 }

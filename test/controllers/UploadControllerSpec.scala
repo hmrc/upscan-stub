@@ -6,7 +6,7 @@ import java.time.{Clock, Instant, ZoneId}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import model.{QuarantinedFile, Reference, UploadDetails, UploadedFile}
+import model._
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
@@ -56,7 +56,9 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
 
       val storedFile     = StoredFile(Array())
       val storageService = mock[FileStorageService]
-      Mockito.when(storageService.get(any())).thenReturn(Some(storedFile))
+      val fileId         = FileId("testFileId")
+      Mockito.when(storageService.store(any())).thenReturn(fileId)
+      Mockito.when(storageService.get(fileId)).thenReturn(Some(storedFile))
 
       val notificationProcessor = mock[NotificationQueueProcessor]
       val virusScanner          = mock[VirusScanner]
@@ -70,7 +72,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
 
       Then("the file should be saved to storage service")
-      Mockito.verify(storageService).store(any(), any())
+      Mockito.verify(storageService).store(any())
 
       And("the notification service should be called")
       Mockito
@@ -78,7 +80,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         .enqueueNotification(UploadedFile(
           new URL("http://mylocalservice.com/callback"),
           Reference("file-key"),
-          new URL("http:/download/file-key"),
+          new URL(s"http:/download/${fileId.value}"),
           UploadDetails(
             initiateDate,
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -129,7 +131,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
 
       Then("the file should be saved to storage service")
-      Mockito.verify(storageService).store(any(), any())
+      Mockito.verify(storageService).store(any())
 
       And("the notification service should be called")
       Mockito

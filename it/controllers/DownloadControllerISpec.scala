@@ -5,7 +5,7 @@ import java.nio.file.{Files, Paths}
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import model.Reference
+import model.{FileId, Reference}
 import org.scalatest.GivenWhenThen
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.Files.TemporaryFile
@@ -31,9 +31,9 @@ class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       Files.write(file.toPath, "Integration test file contents".getBytes)
 
       val storageService = app.injector.instanceOf[FileStorageService]
-      storageService.store(new TemporaryFile(file), Reference("my-it-file"))
+      val fileId         = storageService.store(new TemporaryFile(file))
 
-      val downloadRequest = FakeRequest(Helpers.GET, "/upscan/download/my-it-file")
+      val downloadRequest = FakeRequest(Helpers.GET, s"/upscan/download/${fileId.value}")
 
       When("a GET request is made to /download/:reference endpoint")
       val downloadResponse = route(app, downloadRequest).get

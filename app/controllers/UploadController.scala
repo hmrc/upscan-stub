@@ -103,9 +103,9 @@ class UploadController @Inject()(
     implicit request: RequestHeader): Unit = {
     val reference = Reference(form.key)
 
-    storageService.store(file.ref, reference)
+    val fileId = storageService.store(file.ref)
     val storedFile =
-      storageService.get(reference).getOrElse(throw new IllegalStateException("The file should have been stored"))
+      storageService.get(fileId).getOrElse(throw new IllegalStateException("The file should have been stored"))
 
     val foundVirus: ScanningResult = virusScanner.checkIfClean(storedFile)
 
@@ -119,7 +119,7 @@ class UploadController @Inject()(
         UploadedFile(
           callbackUrl   = new URL(form.callbackUrl),
           reference     = reference,
-          downloadUrl   = new URL(buildDownloadUrl(reference = reference)),
+          downloadUrl   = new URL(buildDownloadUrl(fileId = fileId)),
           uploadDetails = fileUploadDetails
         )
       }
@@ -143,8 +143,8 @@ class UploadController @Inject()(
       case _      => s"application/binary"
     }
 
-  private def buildDownloadUrl(reference: Reference)(implicit request: RequestHeader) =
-    routes.DownloadController.download(reference.value).absoluteURL()
+  private def buildDownloadUrl(fileId: FileId)(implicit request: RequestHeader) =
+    routes.DownloadController.download(fileId.value).absoluteURL()
 
   private def invalidRequestBody(code: String, message: String): Node =
     xml.XML.loadString(s"""<Error>
