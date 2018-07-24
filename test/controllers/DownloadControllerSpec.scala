@@ -2,7 +2,7 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import model.Reference
+import model.{FileId, Reference}
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{GivenWhenThen, Matchers}
@@ -23,16 +23,16 @@ class DownloadControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
   "DownloadController" should {
     "retrieve file from storage if available" in {
       Given("a valid file reference")
-      val validReference = "123-efg-789-0"
-      val storedFile     = Some(StoredFile("Here is some file contents".getBytes))
+      val validFileId = "123-efg-789-0"
+      val storedFile  = Some(StoredFile("Here is some file contents".getBytes))
 
       val storageService = mock[FileStorageService]
-      Mockito.when(storageService.get(Reference(validReference))).thenReturn(storedFile)
+      Mockito.when(storageService.get(FileId(validFileId))).thenReturn(storedFile)
 
       val controller = new DownloadController(storageService)
 
       When("download is called")
-      val downloadResult: Future[Result] = controller.download(validReference)(FakeRequest())
+      val downloadResult: Future[Result] = controller.download(validFileId)(FakeRequest())
 
       Then("a successful response should be returned")
       val downloadStatus = status(downloadResult)
@@ -45,16 +45,16 @@ class DownloadControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
 
     "return Not Found if file not available" in {
       Given("an valid file reference")
-      val validReference = "123-efg-789-0"
-      val storedFile     = None
+      val validFileId = "123-efg-789-0"
+      val storedFile  = None
 
       val storageService = mock[FileStorageService]
-      Mockito.when(storageService.get(Reference(validReference))).thenReturn(storedFile)
+      Mockito.when(storageService.get(FileId(validFileId))).thenReturn(storedFile)
 
       val controller = new DownloadController(storageService)
 
       When("download is called")
-      val downloadResult: Future[Result] = controller.download(validReference)(FakeRequest())
+      val downloadResult: Future[Result] = controller.download(validFileId)(FakeRequest())
 
       Then("a Not Found response should be returned")
       val downloadStatus = status(downloadResult)

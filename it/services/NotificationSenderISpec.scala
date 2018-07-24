@@ -105,20 +105,20 @@ class NotificationSenderISpec
       eventually {
         val expectedCallback = Json
           .obj(
-            "reference"   -> fileReference,
-            "downloadUrl" -> s"http:/upscan/download/$fileReference",
-            "fileStatus"  -> "READY",
+            "reference"  -> fileReference,
+            "fileStatus" -> "READY",
             "uploadDetails" -> Json.obj(
               "uploadTimestamp" -> "2018-04-24T09:30:00Z",
               "checksum"        -> "2f8a8ceeec0dc64ffaca269f55e74699bee881749de20cdb9631f8fcc72f8a62",
               "fileMimeType"    -> "application/pdf",
               "fileName"        -> "my-it-file.pdf"
+              //Excluding downloadUrl
             )
           )
           .toString
         verify(
           1,
-          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
+          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(equalToJson(expectedCallback, true, true)))
 
         Then("the expected file should be available for download from the URL in the callback body")
         val callbackBody = getAllServeEvents.toList.head.getRequest.getBodyAsString

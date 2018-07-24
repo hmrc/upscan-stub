@@ -2,12 +2,19 @@ package model
 
 import java.net.URL
 import java.time.Instant
+import java.util.UUID
 
 import play.api.libs.json._
 
 //Common
 
 case class Reference(value: String)
+
+case class FileId(value: String)
+
+object FileId {
+  def generate() = FileId(UUID.randomUUID().toString)
+}
 
 object Reference {
   implicit val referenceFormat: Format[Reference] = new Format[Reference] {
