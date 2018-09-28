@@ -7,12 +7,6 @@ object MicroServiceBuild extends Build with MicroService {
 
   val appName = "upscan-stub"
 
-  override lazy val plugins: Seq[Plugins] = Seq(
-    SbtAutoBuildPlugin,
-    SbtGitVersioning,
-    SbtDistributablesPlugin
-  )
-
   override lazy val appDependencies: Seq[ModuleID] = AppDependencies()
 }
 
