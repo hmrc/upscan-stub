@@ -1,25 +1,26 @@
-import play.routes.compiler.{InjectedRoutesGenerator, StaticRoutesGenerator}
+import play.routes.compiler.StaticRoutesGenerator
 import play.sbt.PlayImport.PlayKeys
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt.Keys._
 import sbt.Tests.{Group, SubProcess}
 import sbt._
+import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin
+import uk.gov.hmrc.versioning.SbtGitVersioning
+import uk.gov.hmrc.versioning.SbtGitVersioning.autoImport.majorVersion
 
 trait MicroService {
 
   import uk.gov.hmrc._
   import DefaultBuildSettings.{addTestReportOption, defaultSettings, scalaSettings, targetJvm}
-  import TestPhases._
   import scoverage.ScoverageKeys
-  import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
   val appName: String
 
   lazy val appDependencies: Seq[ModuleID] = ???
-  lazy val plugins: Seq[Plugins]          = Nil
+  lazy val plugins: Seq[Plugins] = Seq(
+    play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory
+  )
   lazy val playSettings: Seq[Setting[_]]  = Seq.empty
-
-  routesGenerator := InjectedRoutesGenerator
 
   lazy val scoverageSettings = {
     Seq(
@@ -36,11 +37,10 @@ trait MicroService {
   }
 
   lazy val microservice = Project(appName, file("."))
-    .enablePlugins(Seq(play.sbt.PlayScala) ++ plugins: _*)
+    .enablePlugins(plugins: _*)
     .settings(PlayKeys.playDefaultPort := 9570)
     .settings(playSettings: _*)
-    .settings(scalaSettings ++ scoverageSettings: _*)
-    .settings(publishingSettings: _*)
+    .settings(scalaSettings: _*)
     .settings(defaultSettings(): _*)
     .settings(
       targetJvm := "jvm-1.8",
@@ -50,22 +50,22 @@ trait MicroService {
       retrieveManaged := true,
       routesGenerator := StaticRoutesGenerator
     )
+    .settings(majorVersion := 0)
     .configs(IntegrationTest)
     .settings(inConfig(IntegrationTest)(Defaults.itSettings): _*)
+    .settings(SbtDistributablesPlugin.publishingSettings: _*)
     .settings(
       Keys.fork in IntegrationTest := false,
       unmanagedSourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base => Seq(base / "it")),
-      unmanagedResourceDirectories in IntegrationTest <<= (baseDirectory in IntegrationTest)(base =>
-        Seq(base / "it/resources")),
-      unmanagedClasspath in IntegrationTest += baseDirectory.value / "resources",
       addTestReportOption(IntegrationTest, "int-test-reports"),
-      testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
+      testGrouping in IntegrationTest := TestPhases.oneForkedJvmPerTest((definedTests in IntegrationTest).value),
       parallelExecution in IntegrationTest := false
     )
-    .settings(
-      resolvers += Resolver.bintrayRepo("hmrc", "releases"),
-      resolvers += Resolver.jcenterRepo
-    )
+    .disablePlugins(sbt.plugins.JUnitXmlReportPlugin)
+    .settings(resolvers ++= Seq(
+      Resolver.bintrayRepo("hmrc", "releases"),
+      Resolver.jcenterRepo
+    ))
 }
 
 private object TestPhases {
