@@ -3,9 +3,10 @@ package controllers
 import java.net.URL
 import java.security.MessageDigest
 import java.time.Clock
-import javax.inject.Inject
 
+import javax.inject.Inject
 import model._
+import play.api.Logger
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints.pattern
@@ -40,16 +41,25 @@ class UploadController @Inject()(
   )
 
   def upload(): Action[MultipartFormData[TemporaryFile]] = Action(parse.multipartFormData) { implicit request =>
-    val validatedForm = uploadForm
+    val validatedForm: Either[Seq[String], UploadPostForm] = uploadForm
       .bindFromRequest()
       .fold(
-        formWithErrors => Left(formWithErrors.errors.map(_.toString)),
-        formValues => Right(formValues)
+        formWithErrors => {
+          val errors = formWithErrors.errors.map(_.toString)
+          Logger.debug(s"Error binding uploaded form: [${errors}].")
+          Left(errors)
+        },
+        formValues => {
+          Logger.debug(s"Received uploaded form: [${formValues}].")
+          Right(formValues)
+        }
       )
 
-    val validatedFile = request.body.file("file").map(Right(_)).getOrElse(Left(Seq("'file' field not found")))
+    val validatedFile: Either[Seq[String], MultipartFormData.FilePart[TemporaryFile]] =
+      request.body.file("file").map(Right(_)).getOrElse(Left(Seq("'file' field not found")))
 
-    val validatedInput = ApplicativeHelpers.product(validatedForm, validatedFile)
+    val validatedInput: Either[Traversable[String], (UploadPostForm, MultipartFormData.FilePart[TemporaryFile])] =
+      ApplicativeHelpers.product(validatedForm, validatedFile)
 
     validatedInput.fold(
       errors => BadRequest(invalidRequestBody("400", errors.mkString(", "))),
