@@ -6,6 +6,7 @@ import java.nio.file.Files
 import javax.inject.Singleton
 import model.FileId
 import org.apache.commons.io.FileUtils
+import play.api.Logger
 import play.api.libs.{Files => PlayFiles}
 
 case class StoredFile(body: Array[Byte])
@@ -14,6 +15,8 @@ case class StoredFile(body: Array[Byte])
 class FileStorageService {
 
   private val tempDirectory: File = Files.createTempDirectory("upscan").toFile
+
+  Logger.debug(s"Storing files to temporary directory: [${tempDirectory}].")
 
   def store(temporaryFile: PlayFiles.TemporaryFile): FileId = {
     val fileId = FileId.generate()

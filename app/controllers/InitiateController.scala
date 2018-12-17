@@ -35,7 +35,7 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(i
     Action.async(parse.json) { implicit request =>
       withJsonBody[UploadSettings] { (fileUploadDetails: UploadSettings) =>
         withAllowedCallbackProtocol(fileUploadDetails.callbackUrl){
-          Logger.debug(s"Processing request: [$fileUploadDetails].")
+          Logger.debug(s"Received initiate request: [$fileUploadDetails].")
           val result =
             prepareUploadService.prepareUpload(fileUploadDetails, routes.UploadController.upload().absoluteURL, request.headers.get(USER_AGENT))
           Future.successful(Ok(Json.toJson(result)))
