@@ -5,7 +5,19 @@
 
 This is a stub service for testing and integration with the HMRC upscan services and AWS. It removes the need to have the full suite of upscan services ([upscan-initiate](https://github.com/hmrc/upscan-initiate), [upscan-verify](https://github.com/hmrc/upscan-verify), upscan-[upscan-notify](https://github.com/hmrc/upscan-notify)) running locally, and also replaces the need for local virus scanning, and communication with AWS from local machine.
 
-If you are unclear with the full functionality of the upscan services (including AWS and ClamAV), please read the documentation [here](https://github.com/hmrc/upscan-initiate#architecture)
+#### Where can I use upscan-stub? ####
+upscan-stub is intended for *local testing only*. i.e. smoke testing rather than acceptance testing.
+For acceptance tests, running in a Jenkins hosted environment, teams are strongly encouraged to test against the real suite of Upscan microservices instead of using upscan-stub. The benefits of this are:
+- True reflection of Production functionality
+- More test coverage for the Upscan services themselves
+
+upscan-stub does not provide 100% of the functionality available in the Upscan microservices suite. (If it did, we would have effectively rewritten Upscan again!) Specifically, the following functionality is missing from upscan-stub:
+- Whitelisting of consuming services
+- Verification the all required form fields are present when uploading a file
+- Observability: metrics and logging
+
+
+If you are unclear with the full functionality of the upscan services (including AWS and ClamAV), please read the documentation [here](https://github.com/hmrc/upscan-initiate#architecture).
 
 By running this service locally, the following interactions can take place:
 1. POST to initiate a request and receive JSON parameters for an upload form. This stubs [upscan-initiate](https://github.com/hmrc/upscan-initiate)
