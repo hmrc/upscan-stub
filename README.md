@@ -15,6 +15,7 @@ upscan-stub does not provide 100% of the functionality available in the Upscan m
 - Whitelisting of consuming services
 - Verification the all required form fields are present when uploading a file
 - Observability: metrics and logging
+- Enforcement of correct field ordering when uploading files.
 
 
 If you are unclear with the full functionality of the upscan services (including AWS and ClamAV), please read the documentation [here](https://github.com/hmrc/upscan-initiate#architecture).
