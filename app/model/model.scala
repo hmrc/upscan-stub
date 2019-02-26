@@ -64,7 +64,8 @@ case class UploadPostForm(
   signature: String,
   acl: String,
   key: String,
-  callbackUrl: String
+  callbackUrl: String,
+  successActionRedirect: Option[String]
 )
 
 //Internal model of uploaded file
