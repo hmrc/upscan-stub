@@ -34,7 +34,8 @@ case class UploadSettings(
   callbackUrl: String,
   minimumFileSize: Option[Int],
   maximumFileSize: Option[Int],
-  expectedContentType: Option[String])
+  expectedContentType: Option[String],
+  successRedirect: Option[String])
 
 object UploadSettings {
   implicit val settingsFormat: Format[UploadSettings] = Json.format[UploadSettings]
@@ -64,7 +65,8 @@ case class UploadPostForm(
   signature: String,
   acl: String,
   key: String,
-  callbackUrl: String
+  callbackUrl: String,
+  redirectAfterSuccess : Option[String]
 )
 
 //Internal model of uploaded file

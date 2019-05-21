@@ -13,6 +13,7 @@ import play.api.test.Helpers.route
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import uk.gov.hmrc.play.test.UnitSpec
 import utils.Implicits.Base64StringOps
+import utils.TestTemporaryFile
 
 import scala.concurrent.duration._
 import scala.xml.{Elem, XML}
@@ -25,12 +26,11 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
 
   "UploadController" should {
 
-    "return NoContent for valid upload request" in {
+    "return NoContent for valid upload request without redirect on success" in {
 
       Given("a valid POST multipart form request containing a file")
-      val testFile = new File("it/resources/text-to-upload.txt")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
+        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -56,12 +56,44 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       status(uploadResponse) shouldBe 204
     }
 
+    "return Redirect for valid upload request with redirect on success" in {
+
+      Given("a valid POST multipart form request containing a file")
+      val filePart =
+        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
+      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
+        dataParts = Map(
+          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("20180517T113023Z"),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "x-amz-signature"         -> Seq("some-signature"),
+          "acl"                     -> Seq("private"),
+          "key"                     -> Seq("file-key"),
+          "success_action_redirect" -> Seq("https://localhost"),
+          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+        ),
+        files    = Seq(filePart),
+        badParts = Nil
+      )
+
+      val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
+
+      When("a request is posted to the /upload endpoint")
+      implicit val writer = utils.MultipartFormDataWritable.writeable
+      val uploadResponse  = route(app, uploadRequest).get
+
+      Then("a NoContent response should be returned")
+      status(uploadResponse) shouldBe 303
+      await(uploadResponse).header.headers("Location") shouldBe "https://localhost"
+    }
+
+
     "return Bad Request for invalid form upload request" in {
 
       Given("a invalid POST multipart form request containing a file")
-      val testFile = new File("it/resources/text-to-upload.txt")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
+        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"  -> Seq("AWS4-HMAC-SHA256"),
@@ -138,9 +170,11 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       Given("an invalid request containing invalid file size limits in the policy")
       val policy = policyWithContentLengthRange(100, 1000)
 
-      val testFile = new File(getClass.getResource("/text-to-upload.txt").toURI)
+
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
+        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -178,9 +212,9 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       Given("an invalid request containing invalid file size limits in the policy")
       val policy = policyWithContentLengthRange(5, 10)
 
-      val testFile = new File(getClass.getResource("/text-to-upload.txt").toURI)
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, new TemporaryFile(testFile))
+        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
