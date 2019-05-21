@@ -36,7 +36,8 @@ class UploadController @Inject()(
       "x-amz-signature"         -> nonEmptyText,
       "acl"                     -> nonEmptyText.verifying("Invalid acl", { "private" == _ }),
       "key"                     -> nonEmptyText,
-      "x-amz-meta-callback-url" -> nonEmptyText
+      "x-amz-meta-callback-url" -> nonEmptyText,
+      "success_action_redirect" -> optional(text)
     )(UploadPostForm.apply)(UploadPostForm.unapply)
   )
 
@@ -66,7 +67,7 @@ class UploadController @Inject()(
       validInput =>
         withPolicyChecked(validInput._1, validInput._2) {
           storeAndNotify(validInput._1, validInput._2)
-          NoContent
+          validInput._1.redirectAfterSuccess.fold(NoContent)(SeeOther)
       }
     )
   }
@@ -142,6 +143,7 @@ class UploadController @Inject()(
     }
 
     notificationQueueProcessor.enqueueNotification(fileData)
+
   }
 
   private def mapFilenameToMimeType(filename: String): String =

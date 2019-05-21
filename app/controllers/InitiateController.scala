@@ -24,7 +24,8 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(i
     (JsPath \ "callbackUrl").read[String] and
       (JsPath \ "minimumFileSize").readNullable[Int](min(PrepareUploadService.minFileSize)) and
       (JsPath \ "maximumFileSize").readNullable[Int](min(PrepareUploadService.minFileSize) keepAnd max(PrepareUploadService.maxFileSize)) and
-      (JsPath \ "expectedContentType").readNullable[String]
+      (JsPath \ "expectedContentType").readNullable[String] and
+      (JsPath \ "successRedirect").readNullable[String]
     ) (UploadSettings.apply _)
     .filter(ValidationError("Maximum file size must be equal or greater than minimum file size"))(
       settings =>

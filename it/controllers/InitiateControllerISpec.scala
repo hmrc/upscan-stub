@@ -24,15 +24,12 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
   "InitiateController /initiate" should {
 
-    "respond with expected success JSON when passed a valid request" in {
+    "respond with expected success JSON when passed a valid minimal request" in {
       Given("a valid request JSON body")
       val postBodyJson = Json.parse(
         """
           |{
-          |	"callbackUrl": "http://localhost:9570/callback",
-          |	"minimumFileSize" : 0,
-          |	"maximumFileSize" : 1024,
-          |	"expectedMimeType": "application/xml"
+          |	"callbackUrl": "http://localhost:9570/callback"
           |}
         """.stripMargin)
 
@@ -55,6 +52,42 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
         .as[String] shouldBe "InitiateControllerISpec"
       (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
+    }
+
+    "respond with expected success JSON when passed a valid request" in {
+      Given("a valid request JSON body")
+      val postBodyJson = Json.parse(
+        """
+          |{
+          |	"callbackUrl": "http://localhost:9570/callback",
+          |	"minimumFileSize" : 0,
+          |	"maximumFileSize" : 1024,
+          |	"expectedMimeType": "application/xml",
+          | "successRedirect" : "https://localhost:8080"
+          |}
+        """.stripMargin)
+
+      val initiateRequest =
+        FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
+
+      When("a request is posted to the /initiate endpoint")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("a successful response is returned")
+      status(initiateResponse) shouldBe 200
+
+      And("the response body contains expected JSON")
+      val responseJson = contentAsJson(initiateResponse)
+      responseJson.validate[PreparedUpload].isSuccess shouldBe true
+
+      (responseJson \ "uploadRequest" \ "href").as[String] shouldBe "http:///upscan/upload"
+      (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-callback-url")
+        .as[String] shouldBe "http://localhost:9570/callback"
+      (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
+        .as[String] shouldBe "InitiateControllerISpec"
+      (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
+      (responseJson \ "uploadRequest" \ "fields" \ "redirect_after_success")
+        .as[String] shouldBe "https://localhost:8080"
     }
 
     "respond with 403 when the User Agent header is missing from the request" in {

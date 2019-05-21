@@ -14,7 +14,8 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
       callbackUrl = "callbackUrl",
       minimumFileSize = None,
       maximumFileSize = None,
-      expectedContentType = None
+      expectedContentType = None,
+      successRedirect = None
     )
 
     "include supplied file size constraints in the policy" in {
