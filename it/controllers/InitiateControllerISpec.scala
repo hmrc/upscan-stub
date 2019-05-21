@@ -86,7 +86,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
         .as[String] shouldBe "InitiateControllerISpec"
       (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
-      (responseJson \ "uploadRequest" \ "fields" \ "redirect_after_success")
+      (responseJson \ "uploadRequest" \ "fields" \ "success_action_redirect")
         .as[String] shouldBe "https://localhost:8080"
     }
 
