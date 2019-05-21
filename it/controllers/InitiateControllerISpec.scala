@@ -63,7 +63,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
           |	"minimumFileSize" : 0,
           |	"maximumFileSize" : 1024,
           |	"expectedMimeType": "application/xml",
-          | "successRedirect" : "https://localhost:8080"
+          |	"successRedirect" : "https://localhost:8080"
           |}
         """.stripMargin)
 
