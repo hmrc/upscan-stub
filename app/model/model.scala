@@ -28,33 +28,6 @@ object Reference {
   }
 }
 
-//Initiate request
-
-case class UploadSettings(
-  callbackUrl: String,
-  minimumFileSize: Option[Int],
-  maximumFileSize: Option[Int],
-  expectedContentType: Option[String],
-  successRedirect: Option[String])
-
-object UploadSettings {
-  implicit val settingsFormat: Format[UploadSettings] = Json.format[UploadSettings]
-}
-
-//Initiate response
-
-case class UploadFormTemplate(href: String, fields: Map[String, String])
-
-object UploadFormTemplate {
-  implicit val templateFormat: Format[UploadFormTemplate] = Json.format[UploadFormTemplate]
-}
-
-case class PreparedUpload(reference: Reference, uploadRequest: UploadFormTemplate)
-
-object PreparedUpload {
-  implicit val uploadFormat: Format[PreparedUpload] = Json.format[PreparedUpload]
-}
-
 //Upload request
 
 case class UploadPostForm(
@@ -66,7 +39,7 @@ case class UploadPostForm(
   acl: String,
   key: String,
   callbackUrl: String,
-  redirectAfterSuccess : Option[String]
+  redirectAfterSuccess: Option[String]
 )
 
 //Internal model of uploaded file

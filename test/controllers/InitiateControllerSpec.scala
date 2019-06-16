@@ -2,7 +2,8 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream._
-import model.{PreparedUpload, Reference, UploadFormTemplate}
+import model.Reference
+import model.initiate.{PrepareUploadResponse, UploadFormTemplate}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
@@ -25,7 +26,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val timeout: akka.util.Timeout      = 10.seconds
 
-  val requestHeaders = ((USER_AGENT, "InitiateControllerSpec"))
+  val requestHeaders = (USER_AGENT, "InitiateControllerSpec")
 
   "UpscanController" should {
 
@@ -43,14 +44,14 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val request = FakeRequest().withHeaders(requestHeaders).withBody(validJsonBody)
 
       When("the prepare upload method is called")
-      val preparedUpload = PreparedUpload(
+      val preparedUpload = PrepareUploadResponse(
         Reference("abcd-efgh-1234"),
         UploadFormTemplate("http://myservice.com/upload", Map.empty)
       )
       val prepareService = mock[PrepareUploadService]
-      Mockito.when(prepareService.prepareUpload(any(), any(), any())).thenReturn(preparedUpload)
+      Mockito.when(prepareService.prepareUpload(any(), any())).thenReturn(preparedUpload)
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
-      val result: Future[Result] = controller.prepareUpload()(request)
+      val result: Future[Result] = controller.prepareUploadV1()(request)
 
       Then("a successful HTTP response should be returned")
       val responseStatus = status(result)
@@ -83,7 +84,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
-      val result: Future[Result] = controller.prepareUpload()(request)
+      val result: Future[Result] = controller.prepareUploadV1()(request)
 
       Then("a BadRequest response should be returned")
       val responseStatus = status(result)
@@ -98,7 +99,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
-      val result: Future[Result] = controller.prepareUpload()(request).run()
+      val result: Future[Result] = controller.prepareUploadV1()(request).run()
 
       Then("an Invalid Media Type response should be returned")
       val responseStatus = status(result)
@@ -122,7 +123,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
         Future.failed(new RuntimeException("This block should not have been invoked."))
       }
 
-      status(result) shouldBe 400
+      status(result)          shouldBe 400
       contentAsString(result) should include("Invalid callback url protocol")
     }
 
@@ -132,7 +133,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val result = controller.withAllowedCallbackProtocol("123") {
         Future.failed(new RuntimeException("This block should not have been invoked."))
       }
-      status(result) shouldBe 400
+      status(result)          shouldBe 400
       contentAsString(result) should include("Invalid callback url format")
     }
   }

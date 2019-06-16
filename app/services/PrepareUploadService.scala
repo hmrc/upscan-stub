@@ -6,6 +6,7 @@ import java.util.UUID
 
 import javax.inject.Inject
 import model._
+import model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import play.api.libs.json.{JsArray, JsObject, Json}
 
 class PrepareUploadService @Inject()() {
@@ -13,17 +14,17 @@ class PrepareUploadService @Inject()() {
 
   case class Policy(json: JsObject) {
     import utils.Implicits.Base64StringOps
-    def asBase64String(): String = Json.stringify(json).base64encode
+    def asBase64String(): String = Json.stringify(json).base64encode()
   }
 
-  def prepareUpload(settings: UploadSettings, uploadUrl: String, consumingService: Option[String]): PreparedUpload = {
+  def prepareUpload(settings: UploadSettings, consumingService: Option[String]): PrepareUploadResponse = {
     val reference = generateReference()
-    val policy = toPolicy(settings)
+    val policy    = toPolicy(settings)
 
-    PreparedUpload(
+    PrepareUploadResponse(
       reference = reference,
       uploadRequest = UploadFormTemplate(
-        href = uploadUrl,
+        href = settings.uploadUrl,
         fields = Map(
           "acl"                     -> "private",
           "key"                     -> reference.value,
@@ -33,9 +34,10 @@ class PrepareUploadService @Inject()() {
           "x-amz-date"              -> dateTimeFormatter.format(Instant.now),
           "x-amz-meta-callback-url" -> settings.callbackUrl,
           "x-amz-signature"         -> "xxxx"
-        ) ++ settings.expectedContentType.map{"Content-Type" -> _}
+        ) ++ settings.expectedContentType.map { "Content-Type" -> _ }
           ++ settings.successRedirect.map("success_action_redirect" -> _)
-          ++ consumingService.map{"x-amz-meta-consuming-service" -> _}
+          ++ settings.errorRedirect.map("error_action_redirect"     -> _)
+          ++ consumingService.map { "x-amz-meta-consuming-service" -> _ }
       )
     )
   }

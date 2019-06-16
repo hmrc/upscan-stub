@@ -2,7 +2,7 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import model.PreparedUpload
+import model.initiate.PrepareUploadResponse
 import org.scalatest.GivenWhenThen
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.HeaderNames.USER_AGENT
@@ -26,8 +26,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
     "respond with expected success JSON when passed a valid minimal request" in {
       Given("a valid request JSON body")
-      val postBodyJson = Json.parse(
-        """
+      val postBodyJson = Json.parse("""
           |{
           |	"callbackUrl": "http://localhost:9570/callback"
           |}
@@ -44,20 +43,21 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
       And("the response body contains expected JSON")
       val responseJson = contentAsJson(initiateResponse)
-      responseJson.validate[PreparedUpload].isSuccess shouldBe true
+      responseJson
+        .validate[PrepareUploadResponse](PrepareUploadResponse.format)
+        .isSuccess shouldBe true
 
       (responseJson \ "uploadRequest" \ "href").as[String] shouldBe "http:///upscan/upload"
       (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-callback-url")
         .as[String] shouldBe "http://localhost:9570/callback"
       (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
-        .as[String] shouldBe "InitiateControllerISpec"
+        .as[String]                           shouldBe "InitiateControllerISpec"
       (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
     }
 
     "respond with expected success JSON when passed a valid request" in {
       Given("a valid request JSON body")
-      val postBodyJson = Json.parse(
-        """
+      val postBodyJson = Json.parse("""
           |{
           |	"callbackUrl": "http://localhost:9570/callback",
           |	"minimumFileSize" : 0,
@@ -78,21 +78,22 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
       And("the response body contains expected JSON")
       val responseJson = contentAsJson(initiateResponse)
-      responseJson.validate[PreparedUpload].isSuccess shouldBe true
+      responseJson
+        .validate[PrepareUploadResponse](PrepareUploadResponse.format)
+        .isSuccess shouldBe true
 
       (responseJson \ "uploadRequest" \ "href").as[String] shouldBe "http:///upscan/upload"
       (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-callback-url")
         .as[String] shouldBe "http://localhost:9570/callback"
       (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
-        .as[String] shouldBe "InitiateControllerISpec"
+        .as[String]                           shouldBe "InitiateControllerISpec"
       (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
       (responseJson \ "uploadRequest" \ "fields" \ "success_action_redirect")
         .as[String] shouldBe "https://localhost:8080"
     }
 
     "respond with 403 when the User Agent header is missing from the request" in {
-      val postBodyJson = Json.parse(
-        """
+      val postBodyJson = Json.parse("""
           |{
           |	"callbackUrl": "http://localhost:9570/callback",
           |	"minimumFileSize" : 0,
@@ -114,8 +115,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
     "respond with expected error JSON when passed a invalid request" in {
       Given("an invalid request JSON body")
-      val postBodyJson = Json.parse(
-        """
+      val postBodyJson = Json.parse("""
           |{
           |	"someKey": "someValue",
           |	"someOtherKey" : 0,
@@ -134,15 +134,15 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
       And("the response body contains expected error message")
       val responseBody: String = bodyOf(initiateResponse)
-      responseBody shouldBe "Invalid UploadSettings payload: List((/callbackUrl,List(ValidationError(List(error.path.missing),WrappedArray()))))"
+      responseBody shouldBe "Invalid PrepareUploadRequestV1 payload: List((/callbackUrl,List(ValidationError(List(error.path.missing),WrappedArray()))))"
     }
 
     "respond with supplied file size constraints in the policy" in {
       Given("a valid request with file size constraints")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "http://localhost:9570/callback",
-        "minimumFileSize" -> 123,
-        "maximumFileSize" -> 456,
+        "callbackUrl"         -> "http://localhost:9570/callback",
+        "minimumFileSize"     -> 123,
+        "maximumFileSize"     -> 456,
         "expectedContentType" -> "pdf"
       )
 
@@ -164,7 +164,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     "respond with default file size constraints in the policy when supplied values are missing" in {
       Given("a valid request with no file size constraints")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "http://localhost:9570/callback",
+        "callbackUrl"         -> "http://localhost:9570/callback",
         "expectedContentType" -> "pdf"
       )
 
@@ -186,9 +186,9 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     "respond with 400 when supplied values are outside of expected limits" in {
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "http://localhost:9570/callback",
-        "minimumFileSize" -> -10,
-        "maximumFileSize" -> 104857600*10,
+        "callbackUrl"         -> "http://localhost:9570/callback",
+        "minimumFileSize"     -> -10,
+        "maximumFileSize"     -> 104857600 * 10,
         "expectedContentType" -> "pdf"
       )
 
@@ -204,9 +204,9 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     "respond with 400 when supplied min value is greater than the max value" in {
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
-        "callbackUrl" -> "http://localhost:9570/callback",
-        "minimumFileSize" -> 100,
-        "maximumFileSize" -> 90,
+        "callbackUrl"         -> "http://localhost:9570/callback",
+        "minimumFileSize"     -> 100,
+        "maximumFileSize"     -> 90,
         "expectedContentType" -> "pdf"
       )
 
@@ -220,12 +220,13 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     }
   }
 
-  private def withMinMaxFileSizesInPolicyConditions[T](responseBodyJson: JsValue)(block: (Option[Long], Option[Long]) => T): T = {
+  private def withMinMaxFileSizesInPolicyConditions[T](responseBodyJson: JsValue)(
+    block: (Option[Long], Option[Long]) => T): T = {
     import utils.Implicits.Base64StringOps
 
     val maybeBase64policy = (responseBodyJson \ "uploadRequest" \ "fields" \ "policy").asOpt[String]
 
-    val policy: String = maybeBase64policy.get.base64decode
+    val policy: String = maybeBase64policy.get.base64decode()
 
     val policyJson: JsValue = Json.parse(policy)
 
