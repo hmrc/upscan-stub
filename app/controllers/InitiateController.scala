@@ -18,11 +18,15 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(i
     extends BaseController
     with UserAgentFilter {
 
-  implicit val prepareUploadRequestReads: Reads[PrepareUploadRequestV1] =
+  implicit val prepareUploadRequestV1Reads: Reads[PrepareUploadRequestV1] =
     PrepareUploadRequestV1.reads(PrepareUploadService.maxFileSize)
 
-  def prepareUploadV1(): Action[JsValue] =
-    prepareUpload[PrepareUploadRequestV1]()
+  implicit val prepareUploadRequestV2Reads: Reads[PrepareUploadRequestV2] =
+    PrepareUploadRequestV2.reads(PrepareUploadService.maxFileSize)
+
+  def prepareUploadV1(): Action[JsValue] = prepareUpload[PrepareUploadRequestV1]()
+
+  def prepareUploadV2(): Action[JsValue] = prepareUpload[PrepareUploadRequestV2]()
 
   private def prepareUpload[T <: PrepareUpload]()(implicit reads: Reads[T], manifest: Manifest[T]): Action[JsValue] =
     withUserAgentHeader {
@@ -30,10 +34,12 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(i
         withJsonBody[T] { prepareUpload: T =>
           withAllowedCallbackProtocol(prepareUpload.callbackUrl) {
             Logger.debug(s"Received initiate request: [$prepareUpload].")
+            val url = prepareUpload match {
+              case _: PrepareUploadRequestV1 => routes.UploadController.upload().absoluteURL
+              case _: PrepareUploadRequestV2 => routes.UploadProxyController.upload().absoluteURL
+            }
             val result =
-              prepareUploadService.prepareUpload(
-                prepareUpload.toUploadSettings(routes.UploadController.upload().absoluteURL),
-                request.headers.get(USER_AGENT))
+              prepareUploadService.prepareUpload(prepareUpload.toUploadSettings(url), request.headers.get(USER_AGENT))
             Future.successful(Ok(Json.toJson(result)(PrepareUploadResponse.format)))
           }
         }
