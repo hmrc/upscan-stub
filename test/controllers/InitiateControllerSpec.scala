@@ -9,9 +9,9 @@ import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{GivenWhenThen, Matchers}
 import play.api.http.HeaderNames.USER_AGENT
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Result
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.Results.Ok
+import play.api.mvc.{Action, Result}
 import play.api.test.FakeRequest
 import play.api.test.Helpers.contentAsString
 import services.PrepareUploadService
@@ -28,18 +28,29 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
 
   val requestHeaders = (USER_AGENT, "InitiateControllerSpec")
 
-  "UpscanController" should {
+  "Upscan Initiate V1" should {
+    behave like upscanInitiateTests(_.prepareUploadV1())
+  }
+
+  "Upscan Initiate V2" should {
+    val extraRequestFields = Json
+      .obj("successRedirect" -> "https://www.example.com/nextpage", "errorRedirect" -> "https://www.example.com/error")
+
+    behave like upscanInitiateTests(_.prepareUploadV2(), extraRequestFields)
+  }
+
+  private def upscanInitiateTests( // scalastyle:ignore
+    route: InitiateController => Action[JsValue],
+    extraRequestFields: JsObject = JsObject(Seq())): Unit = {
 
     "return expected JSON for prepare upload when passed valid request" in {
       Given("a request containing a valid JSON body")
-      val validJsonBody: JsValue = Json.parse("""
-          |{
-          |	"callbackUrl": "https://myservice.com/callback",
-          |	"minimumFileSize" : 0,
-          |	"maximumFileSize" : 1024,
-          |	"expectedMimeType": "application/xml"
-          |}
-        """.stripMargin)
+      val validJsonBody: JsValue = Json.obj(
+        "callbackUrl"      -> "https://myservice.com/callback",
+        "minimumFileSize"  -> 0,
+        "maximumFileSize"  -> 1024,
+        "expectedMimeType" -> "application/xml"
+      ) ++ extraRequestFields
 
       val request = FakeRequest().withHeaders(requestHeaders).withBody(validJsonBody)
 
@@ -51,7 +62,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val prepareService = mock[PrepareUploadService]
       Mockito.when(prepareService.prepareUpload(any(), any())).thenReturn(preparedUpload)
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
-      val result: Future[Result] = controller.prepareUploadV1()(request)
+      val result: Future[Result] = route(controller)(request)
 
       Then("a successful HTTP response should be returned")
       val responseStatus = status(result)
@@ -59,15 +70,13 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
 
       And("the response should contain the expected JSON body")
       val body: JsValue = jsonBodyOf(result)
-      body shouldBe Json.parse("""
-          |{
-          |  "reference": "abcd-efgh-1234",
-          |  "uploadRequest": {
-          |    "href":"http://myservice.com/upload",
-          |    "fields":{}
-          |   }
-          |}
-        """.stripMargin)
+      body shouldBe Json.obj(
+        "reference" -> "abcd-efgh-1234",
+        "uploadRequest" -> Json.obj(
+          "href"   -> "http://myservice.com/upload",
+          "fields" -> Json.obj()
+        )
+      )
     }
 
     "return expected error for prepare upload when passed invalid JSON request" in {
@@ -84,7 +93,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
-      val result: Future[Result] = controller.prepareUploadV1()(request)
+      val result: Future[Result] = route(controller)(request)
 
       Then("a BadRequest response should be returned")
       val responseStatus = status(result)
@@ -99,7 +108,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
-      val result: Future[Result] = controller.prepareUploadV1()(request).run()
+      val result: Future[Result] = route(controller)(request).run()
 
       Then("an Invalid Media Type response should be returned")
       val responseStatus = status(result)
