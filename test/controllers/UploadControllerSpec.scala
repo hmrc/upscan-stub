@@ -36,7 +36,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
 
       Given("a valid form containing a valid file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.pdf", None, TestTemporaryFile("/text-to-upload.txt"))
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.pdf",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -95,7 +99,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
     "return HTTP redirect when redirect after success requested" in {
       Given("a valid form containing a valid file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.pdf", None, TestTemporaryFile("/text-to-upload.txt"))
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.pdf",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -149,7 +157,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
 
       And("a See Other response should be returned")
       val uploadStatus = status(uploadResult)
-      uploadStatus shouldBe 303
+      uploadStatus                                   shouldBe 303
       await(uploadResult).header.headers("Location") shouldBe "https://localhost"
 
     }
@@ -158,7 +166,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
 
       Given("a valid form containing a valid file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.txt",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -211,7 +223,11 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
 
       Given("an invalid form containing a valid file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.txt",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),

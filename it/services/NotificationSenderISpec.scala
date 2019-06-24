@@ -7,7 +7,7 @@ import java.time.{Clock, Instant, ZoneId}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.github.tomakehurst.wiremock.client.WireMock._
-import model.PreparedUpload
+import model.initiate.PrepareUploadResponse
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, GivenWhenThen}
@@ -75,17 +75,18 @@ class NotificationSenderISpec
       When("a request is posted to the /initiate endpoint")
       val initiateResponse = route(fakeApplication, initiateRequest).get
       status(initiateResponse) shouldBe 200
-      val preparedUpload: PreparedUpload = jsonBodyOf(initiateResponse).as[PreparedUpload]
+      val response: PrepareUploadResponse =
+        jsonBodyOf(initiateResponse).as[PrepareUploadResponse](PrepareUploadResponse.format)
 
-      val uploadUrl = preparedUpload.uploadRequest.href.replace("http://", "")
-      val formFields = preparedUpload.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
+      val uploadUrl = response.uploadRequest.href.replace("http://", "")
+      val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
         ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
 
-      val fileReference = preparedUpload.uploadRequest.fields.get("key").get
+      val fileReference = response.uploadRequest.fields("key")
 
       And("an uploaded request is posted to the returned /upload endpoint")
       val file: File = Files.createTempFile(Paths.get("/tmp"), "my-it-file", ".txt").toFile
-      file.deleteOnExit
+      file.deleteOnExit()
       Files.write(file.toPath, "End to end notification test contents".getBytes)
 
       val filePart =
@@ -155,18 +156,19 @@ class NotificationSenderISpec
       When("a request is posted to the /initiate endpoint")
       val initiateResponse = route(fakeApplication, initiateRequest).get
       status(initiateResponse) shouldBe 200
-      val preparedUpload: PreparedUpload = jsonBodyOf(initiateResponse).as[PreparedUpload]
+      val response: PrepareUploadResponse =
+        jsonBodyOf(initiateResponse).as[PrepareUploadResponse](PrepareUploadResponse.format)
 
-      val uploadUrl = preparedUpload.uploadRequest.href.replace("http://", "")
-      val formFields = preparedUpload.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
+      val uploadUrl = response.uploadRequest.href.replace("http://", "")
+      val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
         ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
 
-      val fileReference = preparedUpload.uploadRequest.fields.get("key").get
+      val fileReference = response.uploadRequest.fields("key")
 
       And("an uploaded request is posted to the returned /upload endpoint")
       val infectedContents = """X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"""
       val file: File       = Files.createTempFile(Paths.get("/tmp"), "my-infected-file", ".txt").toFile
-      file.deleteOnExit
+      file.deleteOnExit()
       Files.write(file.toPath, infectedContents.getBytes)
 
       val filePart =

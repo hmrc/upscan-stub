@@ -1,26 +1,30 @@
 package services
 
-import model.{PreparedUpload, UploadSettings}
+import model.initiate.{PrepareUploadResponse, UploadSettings}
 import org.scalatest.Matchers
 import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.play.test.UnitSpec
+import utils.Implicits._
 
 class PrepareUploadServiceSpec extends UnitSpec with Matchers {
   "PrepareUploadService.prepareUpload" should {
     val testInstance = new PrepareUploadService()
-    val userAgent = Some("PrepareUploadServiceSpec")
+    val userAgent    = Some("PrepareUploadServiceSpec")
 
     val uploadSettings = UploadSettings(
-      callbackUrl = "callbackUrl",
-      minimumFileSize = None,
-      maximumFileSize = None,
+      uploadUrl           = "uploadUrl",
+      callbackUrl         = "callbackUrl",
+      minimumFileSize     = None,
+      maximumFileSize     = None,
       expectedContentType = None,
-      successRedirect = None
+      successRedirect     = None,
+      errorRedirect       = None
     )
 
     "include supplied file size constraints in the policy" in {
-      val result: PreparedUpload =
-        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = Some(10), maximumFileSize = Some(100)), "uploadUrl", userAgent)
+      val result: PrepareUploadResponse =
+        testInstance
+          .prepareUpload(uploadSettings.copy(minimumFileSize = Some(10), maximumFileSize = Some(100)), userAgent)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(10)
@@ -29,8 +33,8 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
     }
 
     "include default file size constraints in the policy" in {
-      val result: PreparedUpload =
-        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = None, maximumFileSize = None), "uploadUrl", userAgent)
+      val result: PrepareUploadResponse =
+        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = None, maximumFileSize = None), userAgent)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(0)
@@ -39,8 +43,8 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
     }
 
     "include all required fields" in {
-      val result: PreparedUpload =
-        testInstance.prepareUpload(uploadSettings, "uploadUrl", userAgent)
+      val result: PrepareUploadResponse =
+        testInstance.prepareUpload(uploadSettings, userAgent)
 
       result.uploadRequest.fields.keySet should contain theSameElementsAs Set(
         "acl",
@@ -56,10 +60,10 @@ class PrepareUploadServiceSpec extends UnitSpec with Matchers {
     }
   }
 
-  private def withMinMaxFileSizesInPolicyConditions[T](preparedUpload: PreparedUpload)(block: (Option[Long], Option[Long]) => T): T = {
-    import utils.Implicits.Base64StringOps
+  private def withMinMaxFileSizesInPolicyConditions[T](preparedUpload: PrepareUploadResponse)(
+    block: (Option[Long], Option[Long]) => T): T = {
 
-    val policy: String = preparedUpload.uploadRequest.fields("policy").base64decode
+    val policy: String = preparedUpload.uploadRequest.fields("policy").base64decode()
 
     val policyJson: JsValue = Json.parse(policy)
 

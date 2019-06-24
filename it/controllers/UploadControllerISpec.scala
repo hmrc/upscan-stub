@@ -1,7 +1,5 @@
 package controllers
 
-import java.io.File
-
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.GivenWhenThen
@@ -30,13 +28,17 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
 
       Given("a valid POST multipart form request containing a file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.txt",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -60,13 +62,17 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
 
       Given("a valid POST multipart form request containing a file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.txt",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -84,22 +90,25 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a NoContent response should be returned")
-      status(uploadResponse) shouldBe 303
+      status(uploadResponse)                           shouldBe 303
       await(uploadResponse).header.headers("Location") shouldBe "https://localhost"
     }
-
 
     "return Bad Request for invalid form upload request" in {
 
       Given("a invalid POST multipart form request containing a file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None, TestTemporaryFile("/text-to-upload.txt"))
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.txt",
+          None,
+          TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"  -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential" -> Seq("some-credentials"),
           "x-amz-date"       -> Seq("20180517T113023Z"),
-          "policy"           -> Seq("{\"policy\":null}".base64encode),
+          "policy"           -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"  -> Seq("some-signature"),
           "acl"              -> Seq("private"),
           "key"              -> Seq("file-key")
@@ -136,7 +145,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -170,9 +179,10 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       Given("an invalid request containing invalid file size limits in the policy")
       val policy = policyWithContentLengthRange(100, 1000)
 
-
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt",
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.txt",
           None,
           TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
@@ -181,7 +191,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
           "x-amz-signature"         -> Seq("some-signature"),
-          "policy"                  -> Seq(Json.stringify(policy).base64encode),
+          "policy"                  -> Seq(Json.stringify(policy).base64encode()),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
@@ -213,7 +223,10 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       val policy = policyWithContentLengthRange(5, 10)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "text-to-upload.txt", None,
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "text-to-upload.txt",
+          None,
           TestTemporaryFile("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
@@ -221,7 +234,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
           "x-amz-signature"         -> Seq("some-signature"),
-          "policy"                  -> Seq(Json.stringify(policy).base64encode),
+          "policy"                  -> Seq(Json.stringify(policy).base64encode()),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
           "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")

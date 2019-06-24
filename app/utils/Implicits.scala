@@ -9,8 +9,7 @@ object Implicits {
       new String(encodedBytes).replaceAll(System.lineSeparator, "")
     }
 
-    def base64decode(): String = {
+    def base64decode(): String =
       new String(Base64.getDecoder.decode(input))
-    }
   }
 }

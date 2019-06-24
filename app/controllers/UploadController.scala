@@ -47,11 +47,11 @@ class UploadController @Inject()(
       .fold(
         formWithErrors => {
           val errors = formWithErrors.errors.map(_.toString)
-          Logger.debug(s"Error binding uploaded form: [${errors}].")
+          Logger.debug(s"Error binding uploaded form: [$errors].")
           Left(errors)
         },
         formValues => {
-          Logger.debug(s"Received uploaded form: [${formValues}].")
+          Logger.debug(s"Received uploaded form: [$formValues].")
           Right(formValues)
         }
       )
@@ -76,7 +76,7 @@ class UploadController @Inject()(
     block: => Result): Result = {
     import utils.Implicits.Base64StringOps
 
-    val policyJson: String = form.policy.base64decode
+    val policyJson: String = form.policy.base64decode()
 
     val maybeContentLengthCondition: Option[ContentLengthRange] = ContentLengthRange.extract(policyJson)
 
