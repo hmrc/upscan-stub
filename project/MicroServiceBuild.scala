@@ -33,7 +33,8 @@ private object AppDependencies {
     "com.typesafe.play"      %% "play-ws"                     % PlayVersion.current % scope,
     "commons-io"             % "commons-io"                   % "2.6"               % scope,
     "org.scalacheck"         %% "scalacheck"                  % "1.13.4"            % scope,
-    "com.github.tomakehurst" % "wiremock"                     % "2.2.2"             % scope
+    "com.github.tomakehurst" % "wiremock"                     % "2.2.2"             % scope,
+    "org.apache.httpcomponents" % "httpclient"                % "4.5.11"            % scope
   )
 
   object Test {

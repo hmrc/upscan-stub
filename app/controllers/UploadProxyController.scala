@@ -4,6 +4,7 @@ import akka.stream.IOResult
 import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
 import javax.inject.Inject
+import org.apache.http.client.utils.URIBuilder
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.libs.ws.{WSClient, WSResponse}
@@ -36,28 +37,24 @@ class UploadProxyController @Inject()(wsClient: WSClient)(implicit ec: Execution
       }
   }
 
-  private def getErrorParameter(elemType: String, xml: Elem): Option[String] =
-    (xml \ elemType).headOption.map(node => s"error$elemType=${node.text}")
+  private def getErrorParameter(elemType: String, xml: Elem): Option[(String, String)] =
+    (xml \ elemType).headOption.map(node => s"error$elemType" -> node.text)
 
-  private def errorParamsList(body: String): List[String] =
+  private def errorParamsList(body: String): List[(String, String)] =
     Try(scala.xml.XML.loadString(body)).toOption.toList.flatMap { xml =>
       val requestId = getErrorParameter("RequestId", xml)
       val resource  = getErrorParameter("Resource", xml)
       val message   = getErrorParameter("Message", xml)
       val code      = getErrorParameter("Code", xml)
-
       List(code, message, resource, requestId).flatten
     }
 
-  private def redirect(url: String, body: String): Result = {
+  def redirect(url: String, body: String): Result = {
     val errors = errorParamsList(body)
-    val queryParams = if (errors.nonEmpty) {
-      errors.mkString("?", "&", "")
-    } else {
-      ""
+    val urlBuilder = errors.foldLeft(new URIBuilder(url)) { (urlBuilder, error) =>
+      urlBuilder.addParameter(error._1, error._2)
     }
-
-    Results.Redirect(s"$url$queryParams", 303)
+    Redirect(urlBuilder.build().toASCIIString, 303)
   }
 
   private def dataParts(dataPart: Map[String, Seq[String]]): List[DataPart] =
