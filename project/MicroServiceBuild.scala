@@ -13,7 +13,8 @@ private object AppDependencies {
 
   val compile = Seq(
     ws,
-    "uk.gov.hmrc" %% "bootstrap-play-25" % "4.9.0"
+    "uk.gov.hmrc"               %% "bootstrap-play-25" % "4.9.0",
+    "org.apache.httpcomponents" %  "httpclient"        % "4.5.11"
   )
 
   trait TestDependencies {
