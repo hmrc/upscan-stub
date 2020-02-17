@@ -64,12 +64,12 @@ class UploadProxyController @Inject()(wsClient: WSClient)(implicit ec: Execution
   }
 
   private def extractRedirectWithKey(multiPartFormData: MultipartFormData[TemporaryFile]): Either[Result, String] =
-    (extractErrorActionRedirect(multiPartFormData), extractKey(multiPartFormData)) match {
-      case (Right(redirectUrl), Right(key)) => buildErrorActionRedirectUrl(redirectUrl, key)
-      case (l@Left(_), _ )                  => l
-      case (_, r@Left(_))                   => r
-    }
-
+    for {
+      redirectUrl <- extractErrorActionRedirect(multiPartFormData).right
+      key <- extractKey(multiPartFormData).right
+      errorActionRedirectUrl <- buildErrorActionRedirectUrl(redirectUrl, key).right
+    } yield errorActionRedirectUrl
+  
   private def extractErrorActionRedirect(multiPartFormData: MultipartFormData[TemporaryFile]): Either[Result, String] =
     extractSingletonFormValue("error_action_redirect", multiPartFormData).toRight(left = missingRedirectUrl)
 
