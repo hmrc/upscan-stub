@@ -83,7 +83,7 @@ class UploadProxyController @Inject()(wsClient: WSClient)(implicit ec: Execution
 
   private def buildErrorActionRedirectUrl(redirectUrl: String, key: String): Either[Result, String] =
     Try {
-      new URIBuilder(redirectUrl, UTF_8).addParameter("fileReference", key).build().toASCIIString
+      new URIBuilder(redirectUrl, UTF_8).addParameter("key", key).build().toASCIIString
     }.toOption.toRight(left = badRedirectUrl)
 
   private def getErrorParameter(elemType: String, xml: Elem): Option[(String, String)] =
