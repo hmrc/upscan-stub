@@ -6,22 +6,21 @@ import model.initiate.PrepareUploadResponse
 import org.scalatest.GivenWhenThen
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.HeaderNames.USER_AGENT
-import play.api.http.Status
+import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.test.Helpers.{contentAsJson, route}
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import uk.gov.hmrc.play.test.UnitSpec
-import play.api.libs.json._
 
 import scala.concurrent.duration._
 
 class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
 
-  implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: akka.util.Timeout      = 10.seconds
+  private implicit val actorSystem: ActorSystem        = ActorSystem()
+  private implicit val materializer: ActorMaterializer = ActorMaterializer()
+  private implicit val timeout: akka.util.Timeout      = 10.seconds
 
-  val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
+  private val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
   "Upscan Initiate V1" should {
     behave like upscanInitiateTests("/upscan/initiate", "http:///upscan/upload")
@@ -34,22 +33,19 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
     behave like upscanInitiateTests("/upscan/v2/initiate", "http:///upscan/upload-proxy", extraRequestFields)
   }
 
-  "InitiateController /initiate" should {}
-
   private def upscanInitiateTests(uri: String, href: String, extraRequestFields: JsObject = JsObject(Seq())): Unit = { // scalastyle:ignore
 
     "respond with expected success JSON when passed a valid minimal request" in {
       Given("a valid request JSON body")
       val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback") ++ extraRequestFields
 
-      val initiateRequest =
-        FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
       Then("a successful response is returned")
-      status(initiateResponse) shouldBe 200
+      status(initiateResponse) shouldBe OK
 
       And("the response body contains expected JSON")
       val responseJson = contentAsJson(initiateResponse)
@@ -75,14 +71,13 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         "successRedirect"  -> "https://www.example.com/nextpage"
       ) ++ extraRequestFields
 
-      val initiateRequest =
-        FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
       Then("a successful response is returned")
-      status(initiateResponse) shouldBe 200
+      status(initiateResponse) shouldBe OK
 
       And("the response body contains expected JSON")
       val responseJson = contentAsJson(initiateResponse)
@@ -100,7 +95,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         .as[String] shouldBe "https://www.example.com/nextpage"
     }
 
-    "respond with 403 when the User Agent header is missing from the request" in {
+    "respond with Bad Request when the User-Agent header is missing from the request" in {
       val postBodyJson = Json.obj(
         "callbackUrl"      -> "http://localhost:9570/callback",
         "minimumFileSize"  -> 0,
@@ -108,15 +103,14 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         "expectedMimeType" -> "application/xml"
       ) ++ extraRequestFields
 
-      Given("a request without a User Agent header")
-      val initiateRequest =
-        FakeRequest(Helpers.POST, uri, FakeHeaders(), postBodyJson)
+      Given("a request without a User-Agent header")
+      val initiateRequest = FakeRequest(Helpers.POST, uri, FakeHeaders(), postBodyJson)
 
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
-      Then("the response should indicate the request is Forbidden")
-      status(initiateResponse) shouldBe 403
+      Then("the response should indicate the request is invalid")
+      status(initiateResponse) shouldBe BAD_REQUEST
     }
 
     "respond with expected error JSON when passed a invalid request" in {
@@ -127,14 +121,13 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
         "expectedMimeType" -> "application/xml"
       ) ++ extraRequestFields
 
-      val initiateRequest =
-        FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
       Then("a Bad Request response is returned")
-      status(initiateResponse) shouldBe 400
+      status(initiateResponse) shouldBe BAD_REQUEST
 
       And("the response body contains expected error message")
       val responseBody: String = bodyOf(initiateResponse)
@@ -156,8 +149,8 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
-      Then("the response status is 200")
-      status(initiateResponse) shouldBe Status.OK
+      Then("a successful response is returned")
+      status(initiateResponse) shouldBe OK
 
       And("the response policy includes the supplied file size constraints")
       withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
@@ -178,8 +171,8 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
-      Then("the response status is 200")
-      status(initiateResponse) shouldBe Status.OK
+      Then("a successful response is returned")
+      status(initiateResponse) shouldBe OK
 
       And("the response policy includes the default file size constraints")
       withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
@@ -188,7 +181,7 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       }
     }
 
-    "respond with 400 when supplied values are outside of expected limits" in {
+    "respond with Bad Request when supplied values are outside of expected limits" in {
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
@@ -202,11 +195,11 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
-      Then("the response status is 400")
-      status(initiateResponse) shouldBe Status.BAD_REQUEST
+      Then("a Bad Request response is returned")
+      status(initiateResponse) shouldBe BAD_REQUEST
     }
 
-    "respond with 400 when supplied min value is greater than the max value" in {
+    "respond with Bad Request when supplied min value is greater than the max value" in {
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
@@ -220,8 +213,8 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
 
-      Then("the response status is 400")
-      status(initiateResponse) shouldBe Status.BAD_REQUEST
+      Then("a Bad Request response is returned")
+      status(initiateResponse) shouldBe BAD_REQUEST
     }
   }
 
