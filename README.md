@@ -12,8 +12,7 @@ For acceptance tests, running in a Jenkins hosted environment, teams are strongl
 - More test coverage for the Upscan services themselves
 
 upscan-stub does not provide 100% of the functionality available in the Upscan microservices suite. (If it did, we would have effectively rewritten Upscan again!) Specifically, the following functionality is missing from upscan-stub:
-- Whitelisting of consuming services
-- Verification the all required form fields are present when uploading a file
+- Verification that all required form fields are present when uploading a file
 - Observability: metrics and logging
 - Enforcement of correct field ordering when uploading files.
 
@@ -42,7 +41,7 @@ Additionally, a specific file can be passed in at Step 2 which will cause the ap
 Additionally, the service will make a callback in the format documented in [upscan-notify](https://github.com/hmrc/upscan-notify).
 
 ### Testing virus scanning with ```upscan-stub```
-It is possible to test the uploaded of a virus-infected file using a test file included in the ```upscan-stub``` project. Uploading the following file will trigger a quarantined file callback:
+It is possible to test the upload of a virus-infected file using a test file included in the ```upscan-stub``` project. Uploading the following file will trigger a quarantined file callback:
 ```test/resources/eicar-standard-av-test-file.txt```
 
 ##### Sophos Antivirus Scanner collisions

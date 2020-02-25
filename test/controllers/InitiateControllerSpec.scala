@@ -25,6 +25,7 @@ import org.mockito.Mockito
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{GivenWhenThen, Matchers}
 import play.api.http.HeaderNames.USER_AGENT
+import play.api.http.Status.{BAD_REQUEST, OK, UNSUPPORTED_MEDIA_TYPE}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.Results.Ok
 import play.api.mvc.{Action, Result}
@@ -38,11 +39,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
 
-  implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: akka.util.Timeout      = 10.seconds
+  private implicit val actorSystem: ActorSystem        = ActorSystem()
+  private implicit val materializer: ActorMaterializer = ActorMaterializer()
+  private implicit val timeout: akka.util.Timeout      = 10.seconds
 
-  val requestHeaders = (USER_AGENT, "InitiateControllerSpec")
+  private val requestHeaders = (USER_AGENT, "InitiateControllerSpec")
 
   "Upscan Initiate V1" should {
     behave like upscanInitiateTests(_.prepareUploadV1())
@@ -82,7 +83,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
 
       Then("a successful HTTP response should be returned")
       val responseStatus = status(result)
-      responseStatus shouldBe 200
+      responseStatus shouldBe OK
 
       And("the response should contain the expected JSON body")
       val body: JsValue = jsonBodyOf(result)
@@ -112,8 +113,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val result: Future[Result] = route(controller)(request)
 
       Then("a BadRequest response should be returned")
-      val responseStatus = status(result)
-      responseStatus shouldBe 400
+      status(result) shouldBe BAD_REQUEST
     }
 
     "return expected error for prepare upload when passed non-JSON request" in {
@@ -126,9 +126,8 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
       val result: Future[Result] = route(controller)(request).run()
 
-      Then("an Invalid Media Type response should be returned")
-      val responseStatus = status(result)
-      responseStatus shouldBe 415
+      Then("an Unsupported Media Type response should be returned")
+      status(result) shouldBe UNSUPPORTED_MEDIA_TYPE
     }
 
     "allow https callback urls" in {
@@ -138,7 +137,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
         Future.successful(Ok)
       }
 
-      status(result) shouldBe 200
+      status(result) shouldBe OK
     }
 
     "disallow http callback urls" in {
@@ -148,7 +147,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
         Future.failed(new RuntimeException("This block should not have been invoked."))
       }
 
-      status(result)          shouldBe 400
+      status(result)          shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid callback url protocol")
     }
 
@@ -158,7 +157,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val result = controller.withAllowedCallbackProtocol("123") {
         Future.failed(new RuntimeException("This block should not have been invoked."))
       }
-      status(result)          shouldBe 400
+      status(result)          shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid callback url format")
     }
   }
