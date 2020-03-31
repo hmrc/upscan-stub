@@ -21,11 +21,11 @@ import javax.inject.Inject
 import model.FileId
 import play.api.Logger
 import play.api.http.HttpEntity
-import play.api.mvc.{Action, ResponseHeader, Result}
+import play.api.mvc.{ControllerComponents, ResponseHeader, Result}
 import services.FileStorageService
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
-class DownloadController @Inject()(storageService: FileStorageService) extends BaseController {
+class DownloadController @Inject()(storageService: FileStorageService, cc: ControllerComponents) extends BackendController(cc) {
 
   def download(fileId: String) = Action {
 

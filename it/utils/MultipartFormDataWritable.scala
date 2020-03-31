@@ -39,7 +39,7 @@ object MultipartFormDataWritable {
     transform = { form: MultipartFormData[TemporaryFile] =>
       formatDataParts(form.dataParts) ++
         form.files.flatMap { file =>
-          val fileBytes = Files.readAllBytes(Paths.get(file.ref.file.getAbsolutePath))
+          val fileBytes = Files.readAllBytes(Paths.get(file.ref.path.toFile.getAbsolutePath))
           filePartHeader(file) ++ fileBytes ++ Codec.utf_8.encode("\r\n")
         } ++
         Codec.utf_8.encode(s"--$boundary--")

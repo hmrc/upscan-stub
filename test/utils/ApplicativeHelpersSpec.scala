@@ -16,9 +16,11 @@
 
 package utils
 
-import uk.gov.hmrc.play.test.UnitSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ApplicativeHelpersSpec extends UnitSpec {
+
+class ApplicativeHelpersSpec extends AnyWordSpec with Matchers {
   import ApplicativeHelpers._
 
   "product function" should {

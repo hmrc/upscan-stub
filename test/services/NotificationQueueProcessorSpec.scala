@@ -24,13 +24,15 @@ import akka.actor.ActorSystem
 import model.{ProcessedFile, Reference, UploadDetails, UploadedFile}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
-import uk.gov.hmrc.play.test.UnitSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import play.api.test.Helpers.{await, contentAsJson, contentAsString, defaultAwaitTimeout, route, status, writeableOf_AnyContentAsEmpty}
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class NotificationQueueProcessorSpec extends UnitSpec with BeforeAndAfterAll with Eventually {
+class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll with Eventually {
 
   implicit val actorSystem: ActorSystem = ActorSystem("test")
 

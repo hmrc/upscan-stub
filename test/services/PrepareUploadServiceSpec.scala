@@ -17,12 +17,12 @@
 package services
 
 import model.initiate.{PrepareUploadResponse, UploadSettings}
-import org.scalatest.Matchers
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsValue, Json}
-import uk.gov.hmrc.play.test.UnitSpec
 import utils.Implicits._
 
-class PrepareUploadServiceSpec extends UnitSpec with Matchers {
+class PrepareUploadServiceSpec extends AnyWordSpec with Matchers {
   "PrepareUploadService.prepareUpload" should {
     val testInstance = new PrepareUploadService()
     val userAgent    = Some("PrepareUploadServiceSpec")

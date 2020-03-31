@@ -18,23 +18,23 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import model.{FileId, Reference}
-import org.mockito.Mockito
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{GivenWhenThen, Matchers}
+import model.FileId
+import org.mockito.{Mockito, MockitoSugar}
+import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.mvc.Result
 import play.api.test.FakeRequest
+import play.api.test.Helpers._
 import services.{FileStorageService, StoredFile}
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class DownloadControllerSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
+class DownloadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
 
   implicit val actorSystem: ActorSystem        = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: akka.util.Timeout      = 10.seconds
 
   "DownloadController" should {
     "retrieve file from storage if available" in {
@@ -45,7 +45,7 @@ class DownloadControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val storageService = mock[FileStorageService]
       Mockito.when(storageService.get(FileId(validFileId))).thenReturn(storedFile)
 
-      val controller = new DownloadController(storageService)
+      val controller = new DownloadController(storageService, stubControllerComponents())
 
       When("download is called")
       val downloadResult: Future[Result] = controller.download(validFileId)(FakeRequest())
@@ -55,7 +55,7 @@ class DownloadControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       downloadStatus shouldBe 200
 
       And("the body should be set to the expected file contents")
-      val downloadBody: String = bodyOf(downloadResult)
+      val downloadBody: String =  contentAsString(downloadResult)
       downloadBody shouldBe "Here is some file contents"
     }
 
@@ -67,7 +67,7 @@ class DownloadControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       val storageService = mock[FileStorageService]
       Mockito.when(storageService.get(FileId(validFileId))).thenReturn(storedFile)
 
-      val controller = new DownloadController(storageService)
+      val controller = new DownloadController(storageService, stubControllerComponents())
 
       When("download is called")
       val downloadResult: Future[Result] = controller.download(validFileId)(FakeRequest())

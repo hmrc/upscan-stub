@@ -19,9 +19,9 @@ package utils
 import java.io.{FileOutputStream, InputStream}
 
 import org.apache.commons.io.IOUtils
-import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFile}
+import play.api.libs.Files.SingletonTemporaryFileCreator
 
-object TestTemporaryFile {
+object CreateTempFileFromResource {
 
   def apply(path : String) = {
 
@@ -29,7 +29,7 @@ object TestTemporaryFile {
     assert(testResource != null, s"Resource $path not found")
     val tempFile = SingletonTemporaryFileCreator.create("file", "tmp")
     IOUtils.copy(testResource, new FileOutputStream(tempFile))
-    new TemporaryFile(tempFile)
+    tempFile
   }
 
 }

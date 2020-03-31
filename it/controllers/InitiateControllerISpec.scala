@@ -4,17 +4,18 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model.initiate.PrepareUploadResponse
 import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.test.Helpers.{contentAsJson, route}
+import play.api.test.Helpers.{contentAsJson, contentAsString, route, status}
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration._
 
-class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
+class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen {
 
   private implicit val actorSystem: ActorSystem        = ActorSystem()
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -130,9 +131,9 @@ class InitiateControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
       status(initiateResponse) shouldBe BAD_REQUEST
 
       And("the response body contains expected error message")
-      val responseBody: String = bodyOf(initiateResponse)
+      val responseBody: String = contentAsString(initiateResponse)
       responseBody should include(
-        "payload: List((/callbackUrl,List(ValidationError(List(error.path.missing),WrappedArray()))))")
+        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),WrappedArray()))))")
     }
 
     "respond with supplied file size constraints in the policy" in {

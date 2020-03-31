@@ -3,24 +3,24 @@ package controllers
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.MultipartFormData
-import play.api.test.Helpers.route
+import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
-import uk.gov.hmrc.play.test.UnitSpec
+import utils.CreateTempFileFromResource
 import utils.Implicits.Base64StringOps
-import utils.TestTemporaryFile
 
 import scala.concurrent.duration._
 import scala.xml.{Elem, XML}
 
-class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
+class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen {
 
   implicit val actorSystem: ActorSystem        = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: akka.util.Timeout      = 10.seconds
 
   "UploadController" should {
 
@@ -32,7 +32,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "file",
           "text-to-upload.txt",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -66,7 +66,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "file",
           "text-to-upload.txt",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -102,7 +102,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "file",
           "text-to-upload.txt",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"  -> Seq("AWS4-HMAC-SHA256"),
@@ -127,7 +127,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       status(uploadResponse) shouldBe 400
 
       And("the body should contain XML detailing the error")
-      val uploadBody: String    = bodyOf(uploadResponse)
+      val uploadBody: String    = contentAsString(uploadResponse)
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
@@ -165,7 +165,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       status(uploadResponse) shouldBe 400
 
       And("the body should contain XML detailing the error")
-      val uploadBody: String    = bodyOf(uploadResponse)
+      val uploadBody: String    = contentAsString(uploadResponse)
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
@@ -184,7 +184,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "file",
           "text-to-upload.txt",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -210,7 +210,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       status(uploadResponse) shouldBe 400
 
       And("the response body should contain the AWS XML error")
-      val responseBody      = bodyOf(uploadResponse)
+      val responseBody      = contentAsString(uploadResponse)
       val responseBodyAsXml = XML.loadString(responseBody)
 
       (responseBodyAsXml \\ "Error").nonEmpty    shouldBe true
@@ -227,7 +227,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
           "file",
           "text-to-upload.txt",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -253,7 +253,7 @@ class UploadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Given
       status(uploadResponse) shouldBe 400
 
       And("the response body should contain the AWS XML error")
-      val responseBody      = bodyOf(uploadResponse)
+      val responseBody      = contentAsString(uploadResponse)
       val responseBodyAsXml = XML.loadString(responseBody)
 
       (responseBodyAsXml \\ "Error").nonEmpty    shouldBe true

@@ -1,37 +1,35 @@
 package controllers
 
-import java.io.File
-import java.nio.file.{Files, Paths}
+import java.nio.file.Files
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import model.{FileId, Reference}
 import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
-import play.api.libs.Files.TemporaryFile
-import play.api.test.Helpers.{route, _}
+import play.api.libs.Files.SingletonTemporaryFileCreator
+import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import services.FileStorageService
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration._
 
-class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with GivenWhenThen {
+class DownloadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen {
 
   implicit val actorSystem: ActorSystem        = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: akka.util.Timeout      = 10.seconds
 
   "DownloadController" should {
 
     "download a file" in {
       Given("a reference to a previously stored file")
-      val file: File = Files.createTempFile(Paths.get("/tmp"), "my-it-file", ".txt").toFile
-      file.deleteOnExit
+      val file = SingletonTemporaryFileCreator.create("my-it-file", ".txt")
+
       Files.write(file.toPath, "Integration test file contents".getBytes)
 
       val storageService = app.injector.instanceOf[FileStorageService]
-      val fileId         = storageService.store(new TemporaryFile(file))
+      val fileId         = storageService.store(file)
 
       val downloadRequest = FakeRequest(Helpers.GET, s"/upscan/download/${fileId.value}")
 
@@ -40,7 +38,7 @@ class DownloadControllerISpec extends UnitSpec with GuiceOneAppPerSuite with Giv
 
       Then("the uploaded file is successfully retrieved")
       status(downloadResponse) shouldBe 200
-      val downloadContents: String = bodyOf(downloadResponse)
+      val downloadContents: String = contentAsString(downloadResponse)
       downloadContents shouldBe "Integration test file contents"
 
       And("the file is no longer in its original location")
