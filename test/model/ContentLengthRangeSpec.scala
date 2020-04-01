@@ -16,10 +16,11 @@
 
 package model
 
-import org.scalatest.{GivenWhenThen, Matchers}
-import uk.gov.hmrc.play.test.UnitSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class ContentLengthRangeSpec extends UnitSpec with Matchers with GivenWhenThen {
+class ContentLengthRangeSpec extends AnyWordSpec with Matchers with GivenWhenThen {
   "ContentLengthRange extractor" should {
     "extract min/max values" in {
       val policy = "{\"conditions\":[[\"content-length-range\",10,99]]}"

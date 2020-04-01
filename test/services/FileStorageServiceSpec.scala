@@ -16,16 +16,17 @@
 
 package services
 
-import java.nio.file.Files
 import java.util.UUID
 
 import model.{FileId, Reference}
 import org.apache.commons.io.FileUtils
-import org.scalatest.{GivenWhenThen, Matchers}
-import play.api.libs.Files.TemporaryFile
-import uk.gov.hmrc.play.test.UnitSpec
+import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import play.api.libs.Files.SingletonTemporaryFileCreator
 
-class FileStorageServiceSpec extends UnitSpec with Matchers with GivenWhenThen {
+
+class FileStorageServiceSpec extends AnyWordSpec with Matchers with GivenWhenThen {
 
   val fileStorageService = new FileStorageService
 
@@ -36,9 +37,9 @@ class FileStorageServiceSpec extends UnitSpec with Matchers with GivenWhenThen {
 
       Given("there is a temporary file")
       val temporaryFile =
-        new TemporaryFile(Files.createTempFile("upscan-test", "").toFile)
+        SingletonTemporaryFileCreator.create("upscan-test", "")
       val fileBody = "TEST".getBytes
-      FileUtils.writeByteArrayToFile(temporaryFile.file, fileBody)
+      FileUtils.writeByteArrayToFile(temporaryFile.path.toFile, fileBody)
 
       When("we store content of temporary file to the service")
       val fileId = fileStorageService.store(temporaryFile)

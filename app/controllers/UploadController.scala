@@ -30,7 +30,7 @@ import play.api.libs.Files
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
 import services._
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import utils.ApplicativeHelpers
 
 import scala.concurrent.ExecutionContext
@@ -40,8 +40,9 @@ class UploadController @Inject()(
   storageService: FileStorageService,
   notificationQueueProcessor: NotificationQueueProcessor,
   virusScanner: VirusScanner,
-  clock: Clock)(implicit ec: ExecutionContext)
-    extends BaseController {
+  clock: Clock,
+  cc: ControllerComponents)(implicit ec: ExecutionContext)
+    extends BackendController(cc) {
 
   private val uploadForm: Form[UploadPostForm] = Form(
     mapping(
@@ -99,7 +100,7 @@ class UploadController @Inject()(
     val maybeInvalidContentLength: Option[AWSError] =
       maybeContentLengthCondition match {
         case Some(ContentLengthRange(minMaybe, maxMaybe)) =>
-          checkFileSizeConstraints(file.ref.file.length(), minMaybe, maxMaybe)
+          checkFileSizeConstraints(file.ref.path.toFile.length(), minMaybe, maxMaybe)
         case _ => None
       }
 

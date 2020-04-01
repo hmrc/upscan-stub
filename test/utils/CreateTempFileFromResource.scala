@@ -16,24 +16,20 @@
 
 package utils
 
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpec
+import java.io.{FileOutputStream, InputStream}
 
+import org.apache.commons.io.IOUtils
+import play.api.libs.Files.SingletonTemporaryFileCreator
 
-class ImplicitsSpec extends AnyWordSpec with Matchers {
-  import utils.Implicits.Base64StringOps
+object CreateTempFileFromResource {
 
-  "Base64StringOps" should {
-    "base64 encode a String" in {
-      val actual: String = "Hello, World".base64encode()
+  def apply(path : String) = {
 
-      actual shouldBe "SGVsbG8sIFdvcmxk"
-    }
-
-    "base64 decode a String" in {
-      val actual: String = "SGVsbG8sIFdvcmxk".base64decode()
-
-      actual shouldBe "Hello, World"
-    }
+    val testResource: InputStream = getClass.getResourceAsStream(path)
+    assert(testResource != null, s"Resource $path not found")
+    val tempFile = SingletonTemporaryFileCreator.create("file", "tmp")
+    IOUtils.copy(testResource, new FileOutputStream(tempFile))
+    tempFile
   }
+
 }

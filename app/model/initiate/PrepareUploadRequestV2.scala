@@ -15,10 +15,9 @@
  */
 
 package model.initiate
-import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads.{max, min}
-import play.api.libs.json.{JsPath, Reads}
+import play.api.libs.json.{JsPath, JsonValidationError, Reads}
 
 case class PrepareUploadRequestV2(
   callbackUrl: String,
@@ -49,7 +48,7 @@ object PrepareUploadRequestV2 {
       (JsPath \ "minimumFileSize").readNullable[Int](min(0)) and
       (JsPath \ "maximumFileSize").readNullable[Int](min(0) keepAnd max(maxFileSize + 1)) and
       (JsPath \ "expectedContentType").readNullable[String])(PrepareUploadRequestV2.apply _)
-      .filter(ValidationError("Maximum file size must be equal or greater than minimum file size"))(request =>
+      .filter(JsonValidationError("Maximum file size must be equal or greater than minimum file size"))(request =>
         request.minimumFileSize.getOrElse(0) <= request.maximumFileSize.getOrElse(maxFileSize))
 
 }

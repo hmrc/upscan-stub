@@ -23,26 +23,26 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model._
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.mockito.{Mockito, MockitoSugar}
+import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc.{MultipartFormData, Result}
 import play.api.test.FakeRequest
+import play.api.test.Helpers._
 import services._
-import uk.gov.hmrc.play.test.UnitSpec
+import utils.CreateTempFileFromResource
 import utils.Implicits.Base64StringOps
-import utils.TestTemporaryFile
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 
-class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
+class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
 
   implicit val actorSystem: ActorSystem        = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val timeout: akka.util.Timeout      = 10.seconds
 
   private val initiateDate = Instant.parse("2018-04-24T09:30:00Z")
   private val testClock    = new TestClock(initiateDate)
@@ -56,7 +56,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           "file",
           "text-to-upload.pdf",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -84,7 +84,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -99,7 +99,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         .enqueueNotification(UploadedFile(
           new URL("http://mylocalservice.com/callback"),
           Reference("file-key"),
-          new URL(s"http:/download/${fileId.value}"),
+          new URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
             initiateDate,
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -119,7 +119,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           "file",
           "text-to-upload.pdf",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -148,7 +148,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -163,7 +163,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
         .enqueueNotification(UploadedFile(
           new URL("http://mylocalservice.com/callback"),
           Reference("file-key"),
-          new URL(s"http:/download/${fileId.value}"),
+          new URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
             initiateDate,
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -186,7 +186,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           "file",
           "text-to-upload.txt",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -212,7 +212,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(VirusFound("This test file failed scanning"))
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -243,7 +243,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
           "file",
           "text-to-upload.txt",
           None,
-          TestTemporaryFile("/text-to-upload.txt"))
+          CreateTempFileFromResource("/text-to-upload.txt"))
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
@@ -262,7 +262,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -273,7 +273,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       uploadStatus shouldBe 400
 
       And("the body should contain XML detailing the error")
-      val uploadBody: String    = bodyOf(uploadResult)
+      val uploadBody: String    = contentAsString(uploadResult)
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
@@ -307,7 +307,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock)(
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
           ExecutionContext.Implicits.global)
 
       When("upload is called")
@@ -318,7 +318,7 @@ class UploadControllerSpec extends UnitSpec with Matchers with GivenWhenThen wit
       uploadStatus shouldBe 400
 
       And("the body should contain XML detailing the error")
-      val uploadBody: String    = bodyOf(uploadResult)
+      val uploadBody: String    = contentAsString(uploadResult)
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true

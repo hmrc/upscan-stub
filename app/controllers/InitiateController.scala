@@ -23,16 +23,17 @@ import javax.inject.Inject
 import model.initiate._
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json, _}
-import play.api.mvc.{Action, Result}
+import play.api.mvc.{Action, ControllerComponents, Result}
 import services.PrepareUploadService
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
-class InitiateController @Inject()(prepareUploadService: PrepareUploadService)(implicit ec: ExecutionContext)
-    extends BaseController
-    with UserAgentFilter {
+class InitiateController @Inject()(prepareUploadService: PrepareUploadService, cc: ControllerComponents)
+                                  (implicit ec: ExecutionContext)
+  extends BackendController(cc)
+  with UserAgentFilter {
 
   implicit val prepareUploadRequestV1Reads: Reads[PrepareUploadRequestV1] =
     PrepareUploadRequestV1.reads(PrepareUploadService.maxFileSize)

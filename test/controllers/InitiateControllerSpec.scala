@@ -21,27 +21,26 @@ import akka.stream._
 import model.Reference
 import model.initiate.{PrepareUploadResponse, UploadFormTemplate}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito
-import org.scalatest.mockito.MockitoSugar
-import org.scalatest.{GivenWhenThen, Matchers}
+import org.mockito.{Mockito, MockitoSugar}
+import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.http.Status.{BAD_REQUEST, OK, UNSUPPORTED_MEDIA_TYPE}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.Results.Ok
 import play.api.mvc.{Action, Result}
 import play.api.test.FakeRequest
-import play.api.test.Helpers.contentAsString
+import play.api.test.Helpers._
 import services.PrepareUploadService
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
-class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
+class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
 
   private implicit val actorSystem: ActorSystem        = ActorSystem()
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
-  private implicit val timeout: akka.util.Timeout      = 10.seconds
 
   private val requestHeaders = (USER_AGENT, "InitiateControllerSpec")
 
@@ -78,7 +77,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       )
       val prepareService = mock[PrepareUploadService]
       Mockito.when(prepareService.prepareUpload(any(), any())).thenReturn(preparedUpload)
-      val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
+      val controller             = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
       val result: Future[Result] = route(controller)(request)
 
       Then("a successful HTTP response should be returned")
@@ -86,7 +85,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
       responseStatus shouldBe OK
 
       And("the response should contain the expected JSON body")
-      val body: JsValue = jsonBodyOf(result)
+      val body: JsValue = contentAsJson(result)
       body shouldBe Json.obj(
         "reference" -> "abcd-efgh-1234",
         "uploadRequest" -> Json.obj(
@@ -109,7 +108,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
 
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]
-      val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
+      val controller             = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
       val result: Future[Result] = route(controller)(request)
 
       Then("a BadRequest response should be returned")
@@ -123,7 +122,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
 
       When("the prepare upload method is called")
       val prepareService         = mock[PrepareUploadService]
-      val controller             = new InitiateController(prepareService)(ExecutionContext.Implicits.global)
+      val controller             = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
       val result: Future[Result] = route(controller)(request).run()
 
       Then("an Unsupported Media Type response should be returned")
@@ -131,7 +130,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
     }
 
     "allow https callback urls" in {
-      val controller = new InitiateController(mock[PrepareUploadService])(ExecutionContext.Implicits.global)
+      val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())(ExecutionContext.Implicits.global)
 
       val result = controller.withAllowedCallbackProtocol("https://my.callback.url") {
         Future.successful(Ok)
@@ -141,7 +140,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
     }
 
     "disallow http callback urls" in {
-      val controller = new InitiateController(mock[PrepareUploadService])(ExecutionContext.Implicits.global)
+      val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())(ExecutionContext.Implicits.global)
 
       val result = controller.withAllowedCallbackProtocol("http://my.callback.url") {
         Future.failed(new RuntimeException("This block should not have been invoked."))
@@ -152,7 +151,7 @@ class InitiateControllerSpec extends UnitSpec with Matchers with GivenWhenThen w
     }
 
     "disallow invalidly formatted callback urls" in {
-      val controller = new InitiateController(mock[PrepareUploadService])(ExecutionContext.Implicits.global)
+      val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())(ExecutionContext.Implicits.global)
 
       val result = controller.withAllowedCallbackProtocol("123") {
         Future.failed(new RuntimeException("This block should not have been invoked."))

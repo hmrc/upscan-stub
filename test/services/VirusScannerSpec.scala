@@ -16,10 +16,11 @@
 
 package services
 
-import org.scalatest.Matchers
-import uk.gov.hmrc.play.test.UnitSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class VirusScannerSpec extends UnitSpec with Matchers {
+
+class VirusScannerSpec extends AnyWordSpec with Matchers {
 
   val eicarSignature = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 

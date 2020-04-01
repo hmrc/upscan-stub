@@ -82,18 +82,14 @@ case class AWSError(code: String, message: String, requestId: String)
 case class ContentLengthRange(min: Option[Long], max: Option[Long])
 
 object ContentLengthRange {
+
   def extract(policy: String): Option[ContentLengthRange] = {
     val json: JsValue = Json.parse(policy)
 
-    val conditions = (json \ "conditions")(0)
-
-    val contentLengthRangeMaybe = conditions(0).asOpt[String]
-
-    for {
-      clr <- contentLengthRangeMaybe
-      if clr == "content-length-range"
-      minMaybe = conditions(1).asOpt[Long]
-      maxMaybe = conditions(2).asOpt[Long]
-    } yield ContentLengthRange(minMaybe, maxMaybe)
+    (json \ "conditions").asOpt[Seq[Seq[JsValue]]].flatMap {
+      case Seq(Seq(JsString("content-length-range"), mi, mx), _*) => Some(ContentLengthRange(mi.asOpt[Long], mx.asOpt[Long]))
+      case _ => None
+    }
   }
+
 }

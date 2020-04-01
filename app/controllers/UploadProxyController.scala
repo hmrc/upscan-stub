@@ -29,13 +29,13 @@ import play.api.libs.json.Json
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc._
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.xml.Elem
 
-class UploadProxyController @Inject()(wsClient: WSClient)(implicit ec: ExecutionContext) extends BaseController {
+class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponents)(implicit ec: ExecutionContext) extends BackendController(cc) {
 
   private val missingRedirectUrl = Results.BadRequest(
     Json.parse("""{"message":"Could not find error_action_redirect field in request"}""")
@@ -110,10 +110,10 @@ class UploadProxyController @Inject()(wsClient: WSClient)(implicit ec: Execution
     dataPart.flatMap { case (header, body) => body.map(DataPart(header, _)) }.toList
 
   private def fileParts(filePart: Seq[FilePart[TemporaryFile]]): List[FilePart[Source[ByteString, Future[IOResult]]]] =
-    filePart.map(d => FilePart(d.key, d.filename, d.contentType, FileIO.fromPath(d.ref.file.toPath))).toList
+    filePart.map(d => FilePart(d.key, d.filename, d.contentType, FileIO.fromPath(d.ref.path))).toList
 
   private def toResult(response: WSResponse): Result = {
-    val headers = response.allHeaders.toList.flatMap { case (h, v) => v.map((h, _)) }
+    val headers = response.headers.toList.flatMap { case (h, v) => v.map((h, _)) }
     Results.Status(response.status)(response.body).withHeaders(headers: _*)
   }
 
