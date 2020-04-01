@@ -14,7 +14,6 @@ object AppDependencies {
   )
 
   def test(scope: String = "test,it") = Seq(
-    "uk.gov.hmrc"            %% "bootstrap-play-26"           % bootstrapPlayVersion % scope classifier "tests",
     "uk.gov.hmrc"            %% "service-integration-test"    % "0.10.0-play-26"    % scope,
     "uk.gov.hmrc"            %% "http-verbs-test"             % "1.8.0-play-26"     % scope,
     "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % scope,
