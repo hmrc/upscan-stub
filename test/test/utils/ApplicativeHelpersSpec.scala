@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package utils
+package test.utils
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import utils.ApplicativeHelpers
 
 
 class ApplicativeHelpersSpec extends AnyWordSpec with Matchers {

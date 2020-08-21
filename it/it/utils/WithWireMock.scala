@@ -1,4 +1,4 @@
-package utils
+package it.utils
 
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock

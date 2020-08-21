@@ -32,10 +32,9 @@ import play.api.mvc.{MultipartFormData, Result}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import services._
-import utils.CreateTempFileFromResource
+import test.utils.CreateTempFileFromResource
 import utils.Implicits.Base64StringOps
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.xml.Elem
 

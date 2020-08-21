@@ -6,6 +6,8 @@ import java.time.{Clock, Instant, ZoneId}
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.github.tomakehurst.wiremock.client.WireMock._
+import it.utils
+import it.utils.{MultipartFormDataWritable, WithWireMock}
 import model.initiate.PrepareUploadResponse
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
@@ -19,14 +21,12 @@ import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFile}
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
 import play.api.test.{FakeHeaders, FakeRequest}
-import play.api.test.Helpers.{route, status, contentAsString, contentAsJson, writeableOf_AnyContentAsEmpty, defaultAwaitTimeout, await}
+import play.api.test.Helpers.{contentAsJson, contentAsString, defaultAwaitTimeout, route, status, writeableOf_AnyContentAsEmpty}
 import play.api.test.Helpers
 import play.api.{Application, Play}
 import play.mvc.Http.Status.OK
-import utils.WithWireMock
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration._
 
 class NotificationSenderISpec
     extends AnyWordSpec
@@ -107,7 +107,7 @@ class NotificationSenderISpec
       )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = utils.MultipartFormDataWritable.writeable
+      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 

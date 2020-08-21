@@ -2,6 +2,7 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import it.utils.MultipartFormDataWritable
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -11,8 +12,9 @@ import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.MultipartFormData
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
-import utils.CreateTempFileFromResource
+import it.utils.CreateTempFileFromResource
 import utils.Implicits.Base64StringOps
+import it.utils
 
 import scala.concurrent.duration._
 import scala.xml.{Elem, XML}
@@ -51,7 +53,7 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
 
       When("a request is posted to the /upload endpoint")
-      implicit val writer = utils.MultipartFormDataWritable.writeable
+      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a NoContent response should be returned")
