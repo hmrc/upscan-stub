@@ -22,7 +22,7 @@ import model.Reference
 import model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchersSugar.argMatching
-import org.mockito.{Mockito, MockitoSugar}
+import org.mockito.MockitoSugar
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -30,8 +30,8 @@ import play.api.http.HeaderNames.USER_AGENT
 import play.api.http.MimeTypes.XML
 import play.api.http.Status.{BAD_REQUEST, OK, UNSUPPORTED_MEDIA_TYPE}
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.mvc.Results.Ok
 import play.api.mvc.Action
+import play.api.mvc.Results.Ok
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import services.PrepareUploadService
@@ -85,9 +85,6 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
   }
 
   "Upscan Initiate V2 with only mandatory form fields" should {
-    val extraRequestFields = Json.obj(
-      "errorRedirect" -> ErrorRedirectUrl
-    )
     val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
       case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
         if uploadUrl.endsWith("/upload-proxy") &&
@@ -96,10 +93,10 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
           maximumFileSize.isEmpty &&
           expectedContentType.isEmpty &&
           successRedirect.isEmpty &&
-          errorRedirect.contains(ErrorRedirectUrl) => ()
+          errorRedirect.isEmpty => ()
     }
 
-    behave like upscanInitiateTests(_.prepareUploadV2(), extraRequestFields, uploadSettingsMatcher)
+    behave like upscanInitiateTests(_.prepareUploadV2(), uploadSettingsMatcher = uploadSettingsMatcher)
   }
 
   "Upscan Initiate V2 with all form fields" should {
@@ -126,7 +123,7 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
 
   private def upscanInitiateTests(// scalastyle:ignore
                                   route: InitiateController => Action[JsValue],
-                                  extraRequestFields: JsObject = JsObject(Seq.empty),
+                                  extraRequestFields: JsObject = JsObject.empty,
                                   uploadSettingsMatcher: PartialFunction[Any, Unit]): Unit = {
 
     "return expected JSON for prepare upload when passed valid request" in {
@@ -140,7 +137,7 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
         UploadFormTemplate(UploadUrl, Map.empty)
       )
       val prepareService = mock[PrepareUploadService]
-      Mockito.when(prepareService.prepareUpload(argMatching(uploadSettingsMatcher), any())).thenReturn(preparedUpload)
+      when(prepareService.prepareUpload(argMatching(uploadSettingsMatcher), any())).thenReturn(preparedUpload)
 
       val controller = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
       val result = route(controller)(request)

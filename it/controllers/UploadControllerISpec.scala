@@ -16,7 +16,6 @@ import it.utils.CreateTempFileFromResource
 import utils.Implicits.Base64StringOps
 import it.utils
 
-import scala.concurrent.duration._
 import scala.xml.{Elem, XML}
 
 class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen {

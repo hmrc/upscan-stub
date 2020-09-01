@@ -26,29 +26,30 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
   private val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
   "Upscan Initiate V1" should {
-    val responseFieldsMatcher = not contain key ("error_action_redirect")
+    val requestUrl = "/upscan/initiate"
+    val expectedUploadUrl = "http:///upscan/upload"
 
-    behave like upscanInitiateTests("/upscan/initiate", "http:///upscan/upload",
-      responseFieldsMatcher = Some(responseFieldsMatcher))
+    behave like upscanInitiate(requestUrl, expectedUploadUrl)
+    behave like upscanInitiateWithAllFields(requestUrl, expectedUploadUrl,
+      responseFieldsMatcher = Some(not contain key("error_action_redirect")))
   }
 
   "Upscan Initiate V2" should {
+    val requestUrl = "/upscan/v2/initiate"
+    val expectedUploadUrl = "http:///upscan/upload-proxy"
     val errorRedirectUrl = "https://www.example.com/error"
     val extraRequestFields = Json.obj("errorRedirect" -> errorRedirectUrl)
-    val responseFieldsMatcher = contain ("error_action_redirect" -> errorRedirectUrl)
 
-    behave like upscanInitiateTests("/upscan/v2/initiate", "http:///upscan/upload-proxy",
-      extraRequestFields, Some(responseFieldsMatcher))
+    behave like upscanInitiate(requestUrl, expectedUploadUrl)
+    behave like upscanInitiateWithAllFields(requestUrl, expectedUploadUrl, extraRequestFields,
+      responseFieldsMatcher = Some(contain("error_action_redirect" -> errorRedirectUrl)))
   }
 
-  private def upscanInitiateTests(uri: String,
-                                  href: String,
-                                  extraRequestFields: JsObject = JsObject(Seq.empty),
-                                  responseFieldsMatcher: Option[Matcher[Map[String, String]]] = None): Unit = { // scalastyle:ignore
+  private def upscanInitiate(uri: String, href: String): Unit = { // scalastyle:ignore
 
     "respond with expected success JSON when passed a valid minimal request" in {
       Given("a valid request JSON body")
-      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback") ++ extraRequestFields
+      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
 
       val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
@@ -76,9 +77,122 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       fields.get("x-amz-meta-consuming-service") should contain ("InitiateControllerISpec")
       fields.get("x-amz-meta-callback-url") should contain ("http://localhost:9570/callback")
       fields.get("success_action_redirect") shouldBe empty
+      fields.get("error_action_redirect") shouldBe empty
       fields.get("Content-Type") shouldBe empty
-      responseFieldsMatcher.foreach(matchExpectations => fields should matchExpectations)
     }
+
+    "respond with Bad Request when the User-Agent header is missing from the request" in {
+      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
+
+      Given("a request without a User-Agent header")
+      val initiateRequest = FakeRequest(Helpers.POST, uri, FakeHeaders(), postBodyJson)
+
+      When(s"there is a POST request to $uri")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("the response should indicate the request is invalid")
+      status(initiateResponse) shouldBe BAD_REQUEST
+    }
+
+    "respond with expected error JSON when passed an invalid request" in {
+      Given("an invalid request JSON body")
+      val postBodyMissingCallbackUrlJson = Json.obj("someKey" -> "someValue")
+
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyMissingCallbackUrlJson)
+
+      When(s"there is a POST request to $uri")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("a Bad Request response is returned")
+      status(initiateResponse) shouldBe BAD_REQUEST
+
+      And("the response body contains expected error message")
+      contentAsString(initiateResponse) should include(
+        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),WrappedArray()))))"
+      )
+    }
+
+    "respond with supplied file size constraints in the policy" in {
+      Given("a valid request with file size constraints")
+      val postBodyJson = Json.obj(
+        "callbackUrl"         -> "http://localhost:9570/callback",
+        "minimumFileSize"     -> 123,
+        "maximumFileSize"     -> 456
+      )
+
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+
+      When(s"there is a POST request to $uri")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("a successful response is returned")
+      status(initiateResponse) shouldBe OK
+
+      And("the response policy includes the supplied file size constraints")
+      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
+        min shouldBe Some(123)
+        max shouldBe Some(456)
+      }
+    }
+
+    "respond with default file size constraints in the policy when supplied values are missing" in {
+      Given("a valid request with no file size constraints")
+      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
+
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+
+      When(s"there is a POST request to $uri")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("a successful response is returned")
+      status(initiateResponse) shouldBe OK
+
+      And("the response policy includes the default file size constraints")
+      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
+        min shouldBe Some(0)
+        max shouldBe Some(104857600)
+      }
+    }
+
+    "respond with Bad Request when supplied file size constraints are outside of expected limits" in {
+      Given("an invalid request with invalid file size limits")
+      val postBodyJson = Json.obj(
+        "callbackUrl"         -> "http://localhost:9570/callback",
+        "minimumFileSize"     -> -10,
+        "maximumFileSize"     -> 104857600 * 10
+      )
+
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+
+      When(s"there is a POST request to $uri")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("a Bad Request response is returned")
+      status(initiateResponse) shouldBe BAD_REQUEST
+    }
+
+    "respond with Bad Request when supplied min value is greater than the max value" in {
+      Given("an invalid request with invalid file size limits")
+      val postBodyJson = Json.obj(
+        "callbackUrl"         -> "http://localhost:9570/callback",
+        "minimumFileSize"     -> 100,
+        "maximumFileSize"     -> 90
+      )
+
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+
+      When(s"there is a POST request to $uri")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("a Bad Request response is returned")
+      status(initiateResponse) shouldBe BAD_REQUEST
+    }
+  }
+
+  private def upscanInitiateWithAllFields(uri: String,
+                                          href: String,
+                                          extraRequestFields: JsObject = JsObject.empty,
+                                          responseFieldsMatcher: Option[Matcher[Map[String, String]]]): Unit = { // scalastyle:ignore
 
     "respond with expected success JSON when passed a valid request with all fields" in {
       Given("a valid request JSON body")
@@ -118,113 +232,6 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       fields.get("success_action_redirect") should contain ("https://www.example.com/nextpage")
       fields.get("Content-Type") should contain (XML)
       responseFieldsMatcher.foreach(matchExpectations => fields should matchExpectations)
-    }
-
-    "respond with Bad Request when the User-Agent header is missing from the request" in {
-      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback") ++ extraRequestFields
-
-      Given("a request without a User-Agent header")
-      val initiateRequest = FakeRequest(Helpers.POST, uri, FakeHeaders(), postBodyJson)
-
-      When(s"there is a POST request to $uri")
-      val initiateResponse = route(app, initiateRequest).get
-
-      Then("the response should indicate the request is invalid")
-      status(initiateResponse) shouldBe BAD_REQUEST
-    }
-
-    "respond with expected error JSON when passed a invalid request" in {
-      Given("an invalid request JSON body")
-      val postBodyMissingCallbackUrlJson = Json.obj("someKey" -> "someValue") ++ extraRequestFields
-
-      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyMissingCallbackUrlJson)
-
-      When(s"there is a POST request to $uri")
-      val initiateResponse = route(app, initiateRequest).get
-
-      Then("a Bad Request response is returned")
-      status(initiateResponse) shouldBe BAD_REQUEST
-
-      And("the response body contains expected error message")
-      contentAsString(initiateResponse) should include(
-        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),WrappedArray()))))"
-      )
-    }
-
-    "respond with supplied file size constraints in the policy" in {
-      Given("a valid request with file size constraints")
-      val postBodyJson = Json.obj(
-        "callbackUrl"         -> "http://localhost:9570/callback",
-        "minimumFileSize"     -> 123,
-        "maximumFileSize"     -> 456
-      ) ++ extraRequestFields
-
-      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
-
-      When(s"there is a POST request to $uri")
-      val initiateResponse = route(app, initiateRequest).get
-
-      Then("a successful response is returned")
-      status(initiateResponse) shouldBe OK
-
-      And("the response policy includes the supplied file size constraints")
-      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
-        min shouldBe Some(123)
-        max shouldBe Some(456)
-      }
-    }
-
-    "respond with default file size constraints in the policy when supplied values are missing" in {
-      Given("a valid request with no file size constraints")
-      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback") ++ extraRequestFields
-
-      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
-
-      When(s"there is a POST request to $uri")
-      val initiateResponse = route(app, initiateRequest).get
-
-      Then("a successful response is returned")
-      status(initiateResponse) shouldBe OK
-
-      And("the response policy includes the default file size constraints")
-      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
-        min shouldBe Some(0)
-        max shouldBe Some(104857600)
-      }
-    }
-
-    "respond with Bad Request when supplied file size constraints are outside of expected limits" in {
-      Given("an invalid request with invalid file size limits")
-      val postBodyJson = Json.obj(
-        "callbackUrl"         -> "http://localhost:9570/callback",
-        "minimumFileSize"     -> -10,
-        "maximumFileSize"     -> 104857600 * 10
-      ) ++ extraRequestFields
-
-      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
-
-      When(s"there is a POST request to $uri")
-      val initiateResponse = route(app, initiateRequest).get
-
-      Then("a Bad Request response is returned")
-      status(initiateResponse) shouldBe BAD_REQUEST
-    }
-
-    "respond with Bad Request when supplied min value is greater than the max value" in {
-      Given("an invalid request with invalid file size limits")
-      val postBodyJson = Json.obj(
-        "callbackUrl"         -> "http://localhost:9570/callback",
-        "minimumFileSize"     -> 100,
-        "maximumFileSize"     -> 90
-      ) ++ extraRequestFields
-
-      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
-
-      When(s"there is a POST request to $uri")
-      val initiateResponse = route(app, initiateRequest).get
-
-      Then("a Bad Request response is returned")
-      status(initiateResponse) shouldBe BAD_REQUEST
     }
   }
 

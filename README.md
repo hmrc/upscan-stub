@@ -33,6 +33,7 @@ Additionally, a specific file can be passed in at Step 2 which will cause the ap
 | Path | Supported Methods | Description |
 | ---- | ----------------  | ----------- |
 | ```/upscan/initiate``` | POST | Endpoint to retrieve parameters for building upload form. Documented here: [upscan-initiate](https://github.com/hmrc/upscan-initiate) |
+| ```/upscan/v2/initiate``` | POST | Endpoint to retrieve parameters for building upload form offering the additional capability to redirect on upload error.  Documented here: [upscan-initiate-v2](https://github.com/hmrc/upscan-initiate#post-upscanv2initiate) |
 | ```/upscan/upload``` | POST | Endpoint to upload a file, replacing the endpoint for uploading to an AWS S3 bucket. Documented here: [upscan-initiate](https://github.com/hmrc/upscan-initiate) |
 | ```/upscan/download/:reference``` | GET | Retrieve a file from local storage, as uploaded via the ```/upscan/upload``` endpoint |
 
