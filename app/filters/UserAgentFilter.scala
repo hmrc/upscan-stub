@@ -18,18 +18,19 @@ package filters
 
 import play.api.Logger
 import play.api.http.HeaderNames.USER_AGENT
-import play.api.mvc.Action
 import play.api.mvc.Results.BadRequest
+import play.api.mvc.{Action, ActionBuilder, AnyContent, Request}
 
 import scala.concurrent.Future
 
 trait UserAgentFilter {
 
-  def withUserAgentHeader[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
+  def withUserAgentHeader[A](logger: Logger, actionBuilder: ActionBuilder[Request, AnyContent])
+                            (action: Action[A]): Action[A] = actionBuilder.async(action.parser) { request =>
     if (request.headers.get(USER_AGENT).isDefined) {
       action(request)
     } else {
-      Logger.warn(s"Missing $USER_AGENT Header.")
+      logger.warn(s"Missing $USER_AGENT Header.")
       Future.successful(BadRequest(s"Missing $USER_AGENT Header"))
     }
   }

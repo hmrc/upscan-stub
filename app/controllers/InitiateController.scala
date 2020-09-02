@@ -25,7 +25,7 @@ import play.api.Logger
 import play.api.libs.json.{JsValue, Json, _}
 import play.api.mvc.{Action, ControllerComponents, Result}
 import services.PrepareUploadService
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -34,6 +34,8 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
                                   (implicit ec: ExecutionContext)
   extends BackendController(cc)
   with UserAgentFilter {
+
+  private val logger = Logger(this.getClass)
 
   private implicit val prepareUploadRequestV1Reads: Reads[PrepareUploadRequestV1] =
     PrepareUploadRequestV1.reads(PrepareUploadService.maxFileSize)
@@ -46,11 +48,11 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
   def prepareUploadV2(): Action[JsValue] = prepareUpload[PrepareUploadRequestV2]()
 
   private def prepareUpload[T <: PrepareUpload]()(implicit reads: Reads[T], manifest: Manifest[T]): Action[JsValue] =
-    withUserAgentHeader {
+    withUserAgentHeader(logger, cc.actionBuilder) {
       Action.async(parse.json) { implicit request =>
         withJsonBody[T] { prepareUpload: T =>
           withAllowedCallbackProtocol(prepareUpload.callbackUrl) {
-            Logger.debug(s"Received initiate request: [$prepareUpload].")
+            logger.debug(s"Received initiate request: [$prepareUpload].")
             val url = prepareUpload match {
               case _: PrepareUploadRequestV1 => routes.UploadController.upload().absoluteURL
               case _: PrepareUploadRequestV2 => routes.UploadProxyController.upload().absoluteURL
@@ -74,12 +76,12 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
     isHttps match {
       case Success(true) => block
       case Success(false) => {
-        Logger.warn(s"Invalid callback url protocol: [$callbackUrl].")
+        logger.warn(s"Invalid callback url protocol: [$callbackUrl].")
 
         Future.successful(BadRequest(s"Invalid callback url protocol: [$callbackUrl]. Protocol must be https."))
       }
       case Failure(e) => {
-        Logger.warn(s"Invalid callback url format: [$callbackUrl].")
+        logger.warn(s"Invalid callback url format: [$callbackUrl].")
 
         Future.successful(BadRequest(s"Invalid callback url format: [$callbackUrl]. [${e.getMessage}]"))
       }

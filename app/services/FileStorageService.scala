@@ -30,13 +30,14 @@ case class StoredFile(body: Array[Byte])
 @Singleton
 class FileStorageService {
 
+  private val logger = Logger(this.getClass)
   private val tempDirectory: File = Files.createTempDirectory("upscan").toFile
 
-  Logger.debug(s"Storing files to temporary directory: [${tempDirectory}].")
+  logger.debug(s"Storing files to temporary directory: [${tempDirectory}].")
 
   def store(temporaryFile: PlayFiles.TemporaryFile): FileId = {
     val fileId = FileId.generate()
-    temporaryFile.moveTo(buildFileLocation(fileId))
+    temporaryFile.moveFileTo(buildFileLocation(fileId))
     fileId
   }
 

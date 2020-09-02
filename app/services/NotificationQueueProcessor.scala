@@ -16,11 +16,10 @@
 
 package services
 
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
 import akka.pattern.pipe
 import akka.util.Timeout
 import model.ProcessedFile
-import play.api.Logger
 
 import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext
@@ -53,7 +52,7 @@ object QueueProcessingActor {
 }
 
 class QueueProcessingActor(notificationSender: NotificationSender, maximumRetryCount: Int, retryDelay: FiniteDuration)
-    extends Actor {
+    extends Actor with ActorLogging {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
 
@@ -68,17 +67,17 @@ class QueueProcessingActor(notificationSender: NotificationSender, maximumRetryC
       queue = queue.enqueue(file)
       processQueue()
     case NotificationProcessedSuccessfully(notification) =>
-      Logger.info(s"Notification $notification sent successfully")
+      log.info(s"Notification $notification sent successfully")
       running = false
       processQueue()
     case NotificationProcessingFailed(error, notification) =>
       running = false
       processQueue()
       if (notification.retryCount < maximumRetryCount) {
-        Logger.warn(s"Sending notification $notification failed. Retrying", error)
+        log.warning(s"Sending notification $notification failed. Retrying", error)
         context.system.scheduler.scheduleOnce(retryDelay, self, EnqueueNotification(notification.retried))
       } else {
-        Logger.warn(s"Sending notification $notification failed. Retry limit reached", error)
+        log.warning(s"Sending notification $notification failed. Retry limit reached", error)
       }
   }
 

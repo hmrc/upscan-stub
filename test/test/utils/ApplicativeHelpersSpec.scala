@@ -26,7 +26,7 @@ class ApplicativeHelpersSpec extends AnyWordSpec with Matchers {
 
   "product function" should {
     "allow to combine two right Either values into tuple" in {
-      product(Right("VAL1"), Right("VAL2")) shouldBe Right("VAL1", "VAL2")
+      product(Right("VAL1"), Right("VAL2")) shouldBe Right("VAL1" -> "VAL2")
     }
     "collect errors for two left Eithers" in {
       product(Left(Seq("ERR1", "ERR1B")), Left(Seq("ERR2"))) shouldBe Left(Seq("ERR1", "ERR1B", "ERR2"))
