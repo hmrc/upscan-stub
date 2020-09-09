@@ -30,7 +30,7 @@ import play.api.libs.Files
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc._
 import services._
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import utils.ApplicativeHelpers
 
 import scala.concurrent.ExecutionContext
@@ -43,6 +43,8 @@ class UploadController @Inject()(
   clock: Clock,
   cc: ControllerComponents)(implicit ec: ExecutionContext)
     extends BackendController(cc) {
+
+  private val logger = Logger(this.getClass)
 
   private val uploadForm: Form[UploadPostForm] = Form(
     mapping(
@@ -64,11 +66,11 @@ class UploadController @Inject()(
       .fold(
         formWithErrors => {
           val errors = formWithErrors.errors.map(_.toString)
-          Logger.debug(s"Error binding uploaded form: [$errors].")
+          logger.debug(s"Error binding uploaded form: [$errors].")
           Left(errors)
         },
         formValues => {
-          Logger.debug(s"Received uploaded form: [$formValues].")
+          logger.debug(s"Received uploaded form: [$formValues].")
           Right(formValues)
         }
       )

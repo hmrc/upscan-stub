@@ -23,7 +23,7 @@ import model._
 import play.api.Logger
 import play.api.libs.json._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
+import uk.gov.hmrc.http.HttpClient
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -79,6 +79,10 @@ object ErrorDetails {
 class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: ExecutionContext)
     extends NotificationSender {
 
+  import uk.gov.hmrc.http.HttpReads.Implicits._
+
+  private val logger = Logger(this.getClass)
+
   override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] = uploadedFile match {
     case f: UploadedFile    => notifySuccessfulCallback(f)
     case f: QuarantinedFile => notifyFailedCallback(f)
@@ -94,7 +98,7 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
     httpClient
       .POST[ReadyCallbackBody, HttpResponse](uploadedFile.callbackUrl.toString, callback)
       .map { httpResponse =>
-        Logger.info(
+        logger.info(
           s"""File ready notification: [${callback}], sent to service with callbackUrl: [${uploadedFile.callbackUrl}].
              | Response status was: [${httpResponse.status}].""".stripMargin
         )
@@ -111,7 +115,7 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
     httpClient
       .POST[FailedCallbackBody, HttpResponse](quarantinedFile.callbackUrl.toString, callback)
       .map { httpResponse =>
-        Logger.info(
+        logger.info(
           s"""File failed notification: [${callback}], sent to service with callbackUrl: [${quarantinedFile.callbackUrl}].
              | Response status was: [${httpResponse.status}].""".stripMargin
         )

@@ -7,8 +7,8 @@ import uk.gov.hmrc.ForkedJvmPerTestSettings
 val appName = "upscan-stub"
 
 lazy val microservice = Project(appName, file("."))
-  .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory)
-  .settings(scalaVersion := "2.12.10")
+  .enablePlugins(play.sbt.PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin)
+  .settings(scalaVersion := "2.12.12")
   .settings(PlayKeys.playDefaultPort := 9570)
   .settings(majorVersion := 0)
   .settings(

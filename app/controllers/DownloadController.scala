@@ -23,9 +23,11 @@ import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.mvc.{ControllerComponents, ResponseHeader, Result}
 import services.FileStorageService
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 class DownloadController @Inject()(storageService: FileStorageService, cc: ControllerComponents) extends BackendController(cc) {
+
+  private val logger = Logger(this.getClass)
 
   def download(fileId: String) = Action {
 
@@ -38,7 +40,7 @@ class DownloadController @Inject()(storageService: FileStorageService, cc: Contr
       )
     }) getOrElse NotFound
 
-    Logger.debug(s"Download request for file reference: [${fileId}], returning status: [${result.header.status}].")
+    logger.debug(s"Download request for file reference: [${fileId}], returning status: [${result.header.status}].")
 
     result
   }

@@ -29,7 +29,6 @@ import play.api.test.Helpers._
 import services.{FileStorageService, StoredFile}
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class DownloadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
 

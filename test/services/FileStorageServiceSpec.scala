@@ -16,9 +16,7 @@
 
 package services
 
-import java.util.UUID
-
-import model.{FileId, Reference}
+import model.FileId
 import org.apache.commons.io.FileUtils
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
@@ -32,8 +30,6 @@ class FileStorageServiceSpec extends AnyWordSpec with Matchers with GivenWhenThe
 
   "File storage service" should {
     "Allow to store and retrieve file" in {
-
-      val reference = Reference(UUID.randomUUID().toString)
 
       Given("there is a temporary file")
       val temporaryFile =
