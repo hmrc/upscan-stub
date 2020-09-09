@@ -4,10 +4,12 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model.initiate.PrepareUploadResponse
 import org.scalatest.GivenWhenThen
+import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.http.HeaderNames.USER_AGENT
+import play.api.http.MimeTypes.XML
 import play.api.http.Status.{BAD_REQUEST, OK}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.test.Helpers.{contentAsJson, contentAsString, route, status}
@@ -24,21 +26,30 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
   private val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
   "Upscan Initiate V1" should {
-    behave like upscanInitiateTests("/upscan/initiate", "http:///upscan/upload")
+    val requestUrl = "/upscan/initiate"
+    val expectedUploadUrl = "http:///upscan/upload"
+
+    behave like upscanInitiate(requestUrl, expectedUploadUrl)
+    behave like upscanInitiateWithAllFields(requestUrl, expectedUploadUrl,
+      responseFieldsMatcher = Some(not contain key("error_action_redirect")))
   }
 
   "Upscan Initiate V2" should {
-    val extraRequestFields = Json
-      .obj("successRedirect" -> "https://www.example.com/nextpage", "errorRedirect" -> "https://www.example.com/error")
+    val requestUrl = "/upscan/v2/initiate"
+    val expectedUploadUrl = "http:///upscan/upload-proxy"
+    val errorRedirectUrl = "https://www.example.com/error"
+    val extraRequestFields = Json.obj("errorRedirect" -> errorRedirectUrl)
 
-    behave like upscanInitiateTests("/upscan/v2/initiate", "http:///upscan/upload-proxy", extraRequestFields)
+    behave like upscanInitiate(requestUrl, expectedUploadUrl)
+    behave like upscanInitiateWithAllFields(requestUrl, expectedUploadUrl, extraRequestFields,
+      responseFieldsMatcher = Some(contain("error_action_redirect" -> errorRedirectUrl)))
   }
 
-  private def upscanInitiateTests(uri: String, href: String, extraRequestFields: JsObject = JsObject(Seq())): Unit = { // scalastyle:ignore
+  private def upscanInitiate(uri: String, href: String): Unit = { // scalastyle:ignore
 
     "respond with expected success JSON when passed a valid minimal request" in {
       Given("a valid request JSON body")
-      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback") ++ extraRequestFields
+      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
 
       val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
@@ -50,59 +61,28 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       And("the response body contains expected JSON")
       val responseJson = contentAsJson(initiateResponse)
-      responseJson
-        .validate[PrepareUploadResponse](PrepareUploadResponse.format)
-        .isSuccess shouldBe true
+      responseJson.validate[PrepareUploadResponse](PrepareUploadResponse.format).isSuccess shouldBe true
 
       (responseJson \ "uploadRequest" \ "href").as[String] shouldBe href
-      (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-callback-url")
-        .as[String] shouldBe "http://localhost:9570/callback"
-      (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
-        .as[String]                           shouldBe "InitiateControllerISpec"
-      (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
-    }
 
-    "respond with expected success JSON when passed a valid request" in {
-      Given("a valid request JSON body")
-      val postBodyJson = Json.obj(
-        "callbackUrl"      -> "http://localhost:9570/callback",
-        "minimumFileSize"  -> 0,
-        "maximumFileSize"  -> 1024,
-        "expectedMimeType" -> "application/xml",
-        "successRedirect"  -> "https://www.example.com/nextpage"
-      ) ++ extraRequestFields
-
-      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
-
-      When(s"there is a POST request to $uri")
-      val initiateResponse = route(app, initiateRequest).get
-
-      Then("a successful response is returned")
-      status(initiateResponse) shouldBe OK
-
-      And("the response body contains expected JSON")
-      val responseJson = contentAsJson(initiateResponse)
-      responseJson
-        .validate[PrepareUploadResponse](PrepareUploadResponse.format)
-        .isSuccess shouldBe true
-
-      (responseJson \ "uploadRequest" \ "href").as[String] shouldBe href
-      (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-callback-url")
-        .as[String] shouldBe "http://localhost:9570/callback"
-      (responseJson \ "uploadRequest" \ "fields" \ "x-amz-meta-consuming-service")
-        .as[String]                           shouldBe "InitiateControllerISpec"
-      (responseJson \ "reference").as[String] shouldBe (responseJson \ "uploadRequest" \ "fields" \ "key").as[String]
-      (responseJson \ "uploadRequest" \ "fields" \ "success_action_redirect")
-        .as[String] shouldBe "https://www.example.com/nextpage"
+      val reference = (responseJson \ "reference").as[String]
+      val fields = (responseJson \ "uploadRequest" \ "fields").as[Map[String, String]]
+      fields.get("key") should contain (reference)
+      fields.get("acl") should contain ("private")
+      fields should contain key "policy"
+      fields.get("x-amz-algorithm") should contain ("AWS4-HMAC-SHA256")
+      fields should contain key "x-amz-credential"
+      fields should contain key "x-amz-date"
+      fields should contain key "x-amz-signature"
+      fields.get("x-amz-meta-consuming-service") should contain ("InitiateControllerISpec")
+      fields.get("x-amz-meta-callback-url") should contain ("http://localhost:9570/callback")
+      fields.get("success_action_redirect") shouldBe empty
+      fields.get("error_action_redirect") shouldBe empty
+      fields.get("Content-Type") shouldBe empty
     }
 
     "respond with Bad Request when the User-Agent header is missing from the request" in {
-      val postBodyJson = Json.obj(
-        "callbackUrl"      -> "http://localhost:9570/callback",
-        "minimumFileSize"  -> 0,
-        "maximumFileSize"  -> 1024,
-        "expectedMimeType" -> "application/xml"
-      ) ++ extraRequestFields
+      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
 
       Given("a request without a User-Agent header")
       val initiateRequest = FakeRequest(Helpers.POST, uri, FakeHeaders(), postBodyJson)
@@ -114,15 +94,11 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       status(initiateResponse) shouldBe BAD_REQUEST
     }
 
-    "respond with expected error JSON when passed a invalid request" in {
+    "respond with expected error JSON when passed an invalid request" in {
       Given("an invalid request JSON body")
-      val postBodyJson = Json.obj(
-        "someKey"          -> "someValue",
-        "someOtherKey"     -> 0,
-        "expectedMimeType" -> "application/xml"
-      ) ++ extraRequestFields
+      val postBodyMissingCallbackUrlJson = Json.obj("someKey" -> "someValue")
 
-      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyMissingCallbackUrlJson)
 
       When(s"there is a POST request to $uri")
       val initiateResponse = route(app, initiateRequest).get
@@ -131,9 +107,9 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       status(initiateResponse) shouldBe BAD_REQUEST
 
       And("the response body contains expected error message")
-      val responseBody: String = contentAsString(initiateResponse)
-      responseBody should include(
-        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),WrappedArray()))))")
+      contentAsString(initiateResponse) should include(
+        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),WrappedArray()))))"
+      )
     }
 
     "respond with supplied file size constraints in the policy" in {
@@ -141,9 +117,8 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
         "minimumFileSize"     -> 123,
-        "maximumFileSize"     -> 456,
-        "expectedContentType" -> "pdf"
-      ) ++ extraRequestFields
+        "maximumFileSize"     -> 456
+      )
 
       val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
@@ -162,10 +137,7 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
     "respond with default file size constraints in the policy when supplied values are missing" in {
       Given("a valid request with no file size constraints")
-      val postBodyJson = Json.obj(
-        "callbackUrl"         -> "http://localhost:9570/callback",
-        "expectedContentType" -> "pdf"
-      ) ++ extraRequestFields
+      val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
 
       val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
@@ -182,14 +154,13 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       }
     }
 
-    "respond with Bad Request when supplied values are outside of expected limits" in {
+    "respond with Bad Request when supplied file size constraints are outside of expected limits" in {
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
         "minimumFileSize"     -> -10,
-        "maximumFileSize"     -> 104857600 * 10,
-        "expectedContentType" -> "pdf"
-      ) ++ extraRequestFields
+        "maximumFileSize"     -> 104857600 * 10
+      )
 
       val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
@@ -205,9 +176,8 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
         "minimumFileSize"     -> 100,
-        "maximumFileSize"     -> 90,
-        "expectedContentType" -> "pdf"
-      ) ++ extraRequestFields
+        "maximumFileSize"     -> 90
+      )
 
       val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
 
@@ -216,6 +186,52 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       Then("a Bad Request response is returned")
       status(initiateResponse) shouldBe BAD_REQUEST
+    }
+  }
+
+  private def upscanInitiateWithAllFields(uri: String,
+                                          href: String,
+                                          extraRequestFields: JsObject = JsObject.empty,
+                                          responseFieldsMatcher: Option[Matcher[Map[String, String]]]): Unit = { // scalastyle:ignore
+
+    "respond with expected success JSON when passed a valid request with all fields" in {
+      Given("a valid request JSON body")
+      val postBodyJson = Json.obj(
+        "callbackUrl"      -> "http://localhost:9570/callback",
+        "minimumFileSize"  -> 0,
+        "maximumFileSize"  -> 1024,
+        "expectedContentType" -> XML,
+        "successRedirect"  -> "https://www.example.com/nextpage"
+      ) ++ extraRequestFields
+
+      val initiateRequest = FakeRequest(Helpers.POST, uri, requestHeaders, postBodyJson)
+
+      When(s"there is a POST request to $uri")
+      val initiateResponse = route(app, initiateRequest).get
+
+      Then("a successful response is returned")
+      status(initiateResponse) shouldBe OK
+
+      And("the response body contains expected JSON")
+      val responseJson = contentAsJson(initiateResponse)
+      responseJson.validate[PrepareUploadResponse](PrepareUploadResponse.format).isSuccess shouldBe true
+
+      (responseJson \ "uploadRequest" \ "href").as[String] shouldBe href
+
+      val reference = (responseJson \ "reference").as[String]
+      val fields = (responseJson \ "uploadRequest" \ "fields").as[Map[String, String]]
+      fields.get("key") should contain (reference)
+      fields.get("acl") should contain ("private")
+      fields should contain key "policy"
+      fields.get("x-amz-algorithm") should contain ("AWS4-HMAC-SHA256")
+      fields should contain key "x-amz-credential"
+      fields should contain key "x-amz-date"
+      fields should contain key "x-amz-signature"
+      fields.get("x-amz-meta-consuming-service") should contain ("InitiateControllerISpec")
+      fields.get("x-amz-meta-callback-url") should contain ("http://localhost:9570/callback")
+      fields.get("success_action_redirect") should contain ("https://www.example.com/nextpage")
+      fields.get("Content-Type") should contain (XML)
+      responseFieldsMatcher.foreach(matchExpectations => fields should matchExpectations)
     }
   }
 

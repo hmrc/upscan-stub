@@ -19,77 +19,139 @@ package controllers
 import akka.actor.ActorSystem
 import akka.stream._
 import model.Reference
-import model.initiate.{PrepareUploadResponse, UploadFormTemplate}
+import model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import org.mockito.ArgumentMatchers.any
-import org.mockito.{Mockito, MockitoSugar}
+import org.mockito.ArgumentMatchersSugar.argMatching
+import org.mockito.MockitoSugar
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.HeaderNames.USER_AGENT
+import play.api.http.MimeTypes.XML
 import play.api.http.Status.{BAD_REQUEST, OK, UNSUPPORTED_MEDIA_TYPE}
 import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.mvc.Action
 import play.api.mvc.Results.Ok
-import play.api.mvc.{Action, Result}
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import services.PrepareUploadService
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
+
+  import InitiateControllerSpec._
 
   private implicit val actorSystem: ActorSystem        = ActorSystem()
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   private val requestHeaders = (USER_AGENT, "InitiateControllerSpec")
 
-  "Upscan Initiate V1" should {
-    behave like upscanInitiateTests(_.prepareUploadV1())
+  "Upscan Initiate V1 with only mandatory form fields" should {
+    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+        if uploadUrl.endsWith("/upload") &&
+          callbackUrl == CallbackUrl &&
+          minimumFileSize.isEmpty &&
+          maximumFileSize.isEmpty &&
+          expectedContentType.isEmpty &&
+          successRedirect.isEmpty &&
+          errorRedirect.isEmpty => ()
+    }
+
+    behave like upscanInitiateTests(_.prepareUploadV1(), uploadSettingsMatcher = uploadSettingsMatcher)
   }
 
-  "Upscan Initiate V2" should {
-    val extraRequestFields = Json
-      .obj("successRedirect" -> "https://www.example.com/nextpage", "errorRedirect" -> "https://www.example.com/error")
+  "Upscan Initiate V1 with all form fields" should {
+    val optionalFields = Json.obj(
+      "minimumFileSize"  -> 0,
+      "maximumFileSize"  -> 1024,
+      "expectedContentType" -> XML,
+      "successRedirect" -> SuccessRedirectUrl
+    )
 
-    behave like upscanInitiateTests(_.prepareUploadV2(), extraRequestFields)
+    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+        if uploadUrl.endsWith("/upload") &&
+          callbackUrl == CallbackUrl &&
+          minimumFileSize.contains(0) &&
+          maximumFileSize.contains(1024) &&
+          expectedContentType.contains(XML) &&
+          successRedirect.contains(SuccessRedirectUrl) &&
+          errorRedirect.isEmpty => ()
+    }
+
+    behave like upscanInitiateTests(_.prepareUploadV1(), optionalFields, uploadSettingsMatcher)
   }
 
-  private def upscanInitiateTests( // scalastyle:ignore
-    route: InitiateController => Action[JsValue],
-    extraRequestFields: JsObject = JsObject(Seq())): Unit = {
+  "Upscan Initiate V2 with only mandatory form fields" should {
+    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+        if uploadUrl.endsWith("/upload-proxy") &&
+          callbackUrl == CallbackUrl &&
+          minimumFileSize.isEmpty &&
+          maximumFileSize.isEmpty &&
+          expectedContentType.isEmpty &&
+          successRedirect.isEmpty &&
+          errorRedirect.isEmpty => ()
+    }
+
+    behave like upscanInitiateTests(_.prepareUploadV2(), uploadSettingsMatcher = uploadSettingsMatcher)
+  }
+
+  "Upscan Initiate V2 with all form fields" should {
+    val extraRequestFields = Json.obj(
+      "errorRedirect" -> ErrorRedirectUrl,
+      "minimumFileSize"  -> 0,
+      "maximumFileSize"  -> 1024,
+      "expectedContentType" -> XML,
+      "successRedirect" -> SuccessRedirectUrl
+    )
+    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+        if uploadUrl.endsWith("/upload-proxy") &&
+          callbackUrl == CallbackUrl &&
+          minimumFileSize.contains(0) &&
+          maximumFileSize.contains(1024) &&
+          expectedContentType.contains(XML) &&
+          successRedirect.contains(SuccessRedirectUrl) &&
+          errorRedirect.contains(ErrorRedirectUrl) => ()
+    }
+
+    behave like upscanInitiateTests(_.prepareUploadV2(), extraRequestFields, uploadSettingsMatcher)
+  }
+
+  private def upscanInitiateTests(// scalastyle:ignore
+                                  route: InitiateController => Action[JsValue],
+                                  extraRequestFields: JsObject = JsObject.empty,
+                                  uploadSettingsMatcher: PartialFunction[Any, Unit]): Unit = {
 
     "return expected JSON for prepare upload when passed valid request" in {
       Given("a request containing a valid JSON body")
-      val validJsonBody: JsValue = Json.obj(
-        "callbackUrl"      -> "https://myservice.com/callback",
-        "minimumFileSize"  -> 0,
-        "maximumFileSize"  -> 1024,
-        "expectedMimeType" -> "application/xml"
-      ) ++ extraRequestFields
-
+      val validJsonBody = Json.obj("callbackUrl" -> CallbackUrl) ++ extraRequestFields
       val request = FakeRequest().withHeaders(requestHeaders).withBody(validJsonBody)
 
       When("the prepare upload method is called")
       val preparedUpload = PrepareUploadResponse(
         Reference("abcd-efgh-1234"),
-        UploadFormTemplate("http://myservice.com/upload", Map.empty)
+        UploadFormTemplate(UploadUrl, Map.empty)
       )
       val prepareService = mock[PrepareUploadService]
-      Mockito.when(prepareService.prepareUpload(any(), any())).thenReturn(preparedUpload)
-      val controller             = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
-      val result: Future[Result] = route(controller)(request)
+      when(prepareService.prepareUpload(argMatching(uploadSettingsMatcher), any())).thenReturn(preparedUpload)
+
+      val controller = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
+      val result = route(controller)(request)
 
       Then("a successful HTTP response should be returned")
       val responseStatus = status(result)
       responseStatus shouldBe OK
 
       And("the response should contain the expected JSON body")
-      val body: JsValue = contentAsJson(result)
+      val body = contentAsJson(result)
       body shouldBe Json.obj(
         "reference" -> "abcd-efgh-1234",
         "uploadRequest" -> Json.obj(
-          "href"   -> "http://myservice.com/upload",
+          "href" -> UploadUrl,
           "fields" -> Json.obj()
         )
       )
@@ -97,19 +159,18 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
 
     "return expected error for prepare upload when passed invalid JSON request" in {
       Given("a request containing an invalid JSON body")
-      val invalidJsonBody: JsValue = Json.parse("""
+      val invalidJsonBody = Json.parse("""
           |{
           |	"someKey": "someValue",
           |	"someOtherKey" : 12345
-          |}
-        """.stripMargin)
+          |}""".stripMargin)
 
       val request = FakeRequest().withHeaders(requestHeaders).withBody(invalidJsonBody)
 
       When("the prepare upload method is called")
-      val prepareService         = mock[PrepareUploadService]
-      val controller             = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
-      val result: Future[Result] = route(controller)(request)
+      val prepareService = mock[PrepareUploadService]
+      val controller = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
+      val result = route(controller)(request)
 
       Then("a BadRequest response should be returned")
       status(result) shouldBe BAD_REQUEST
@@ -117,13 +178,13 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
 
     "return expected error for prepare upload when passed non-JSON request" in {
       Given("a request containing an invalid JSON body")
-      val invalidStringBody: String = "This is an invalid body"
-      val request                   = FakeRequest().withHeaders(requestHeaders).withBody(invalidStringBody)
+      val invalidStringBody = "This is an invalid body"
+      val request = FakeRequest().withHeaders(requestHeaders).withBody(invalidStringBody)
 
       When("the prepare upload method is called")
-      val prepareService         = mock[PrepareUploadService]
-      val controller             = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
-      val result: Future[Result] = route(controller)(request).run()
+      val prepareService = mock[PrepareUploadService]
+      val controller = new InitiateController(prepareService, stubControllerComponents())(ExecutionContext.Implicits.global)
+      val result = route(controller)(request).run()
 
       Then("an Unsupported Media Type response should be returned")
       status(result) shouldBe UNSUPPORTED_MEDIA_TYPE
@@ -160,4 +221,11 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
       contentAsString(result) should include("Invalid callback url format")
     }
   }
+}
+
+private object InitiateControllerSpec {
+  val CallbackUrl = "https://myservice.com/callback"
+  val SuccessRedirectUrl = "https://www.example.com/nextpage"
+  val ErrorRedirectUrl = "https://www.example.com/error"
+  val UploadUrl = "http://myservice.com/upload"
 }

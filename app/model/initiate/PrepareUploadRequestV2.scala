@@ -15,14 +15,15 @@
  */
 
 package model.initiate
+
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads.{max, min}
 import play.api.libs.json.{JsPath, JsonValidationError, Reads}
 
 case class PrepareUploadRequestV2(
   callbackUrl: String,
-  successRedirect: String,
-  errorRedirect: String,
+  successRedirect: Option[String],
+  errorRedirect: Option[String],
   minimumFileSize: Option[Int],
   maximumFileSize: Option[Int],
   expectedContentType: Option[String])
@@ -34,8 +35,8 @@ case class PrepareUploadRequestV2(
     minimumFileSize     = minimumFileSize,
     maximumFileSize     = maximumFileSize,
     expectedContentType = expectedContentType,
-    successRedirect     = Some(successRedirect),
-    errorRedirect       = Some(errorRedirect)
+    successRedirect     = successRedirect,
+    errorRedirect       = errorRedirect
   )
 }
 
@@ -43,12 +44,11 @@ object PrepareUploadRequestV2 {
 
   def reads(maxFileSize: Int): Reads[PrepareUploadRequestV2] =
     ((JsPath \ "callbackUrl").read[String] and
-      (JsPath \ "successRedirect").read[String] and
-      (JsPath \ "errorRedirect").read[String] and
+      (JsPath \ "successRedirect").readNullable[String] and
+      (JsPath \ "errorRedirect").readNullable[String] and
       (JsPath \ "minimumFileSize").readNullable[Int](min(0)) and
       (JsPath \ "maximumFileSize").readNullable[Int](min(0) keepAnd max(maxFileSize + 1)) and
       (JsPath \ "expectedContentType").readNullable[String])(PrepareUploadRequestV2.apply _)
       .filter(JsonValidationError("Maximum file size must be equal or greater than minimum file size"))(request =>
         request.minimumFileSize.getOrElse(0) <= request.maximumFileSize.getOrElse(maxFileSize))
-
 }

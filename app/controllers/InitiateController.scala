@@ -35,10 +35,10 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
   extends BackendController(cc)
   with UserAgentFilter {
 
-  implicit val prepareUploadRequestV1Reads: Reads[PrepareUploadRequestV1] =
+  private implicit val prepareUploadRequestV1Reads: Reads[PrepareUploadRequestV1] =
     PrepareUploadRequestV1.reads(PrepareUploadService.maxFileSize)
 
-  implicit val prepareUploadRequestV2Reads: Reads[PrepareUploadRequestV2] =
+  private implicit val prepareUploadRequestV2Reads: Reads[PrepareUploadRequestV2] =
     PrepareUploadRequestV2.reads(PrepareUploadService.maxFileSize)
 
   def prepareUploadV1(): Action[JsValue] = prepareUpload[PrepareUploadRequestV1]()
@@ -55,8 +55,8 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
               case _: PrepareUploadRequestV1 => routes.UploadController.upload().absoluteURL
               case _: PrepareUploadRequestV2 => routes.UploadProxyController.upload().absoluteURL
             }
-            val result =
-              prepareUploadService.prepareUpload(prepareUpload.toUploadSettings(url), request.headers.get(USER_AGENT))
+            val result = prepareUploadService.prepareUpload(prepareUpload.toUploadSettings(url),
+              request.headers.get(USER_AGENT))
             Future.successful(Ok(Json.toJson(result)(PrepareUploadResponse.format)))
           }
         }

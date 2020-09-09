@@ -19,6 +19,7 @@ package services
 import model.initiate.{PrepareUploadResponse, UploadSettings}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import play.api.http.HeaderNames.CONTENT_TYPE
 import play.api.libs.json.{JsValue, Json}
 import utils.Implicits._
 
@@ -38,9 +39,8 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers {
     )
 
     "include supplied file size constraints in the policy" in {
-      val result: PrepareUploadResponse =
-        testInstance
-          .prepareUpload(uploadSettings.copy(minimumFileSize = Some(10), maximumFileSize = Some(100)), userAgent)
+      val result = testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = Some(10), maximumFileSize = Some(100)),
+        userAgent)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(10)
@@ -49,8 +49,8 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers {
     }
 
     "include default file size constraints in the policy" in {
-      val result: PrepareUploadResponse =
-        testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = None, maximumFileSize = None), userAgent)
+      val result = testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = None, maximumFileSize = None),
+        userAgent)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(0)
@@ -59,8 +59,7 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers {
     }
 
     "include all required fields" in {
-      val result: PrepareUploadResponse =
-        testInstance.prepareUpload(uploadSettings, userAgent)
+      val result = testInstance.prepareUpload(uploadSettings, userAgent)
 
       result.uploadRequest.fields.keySet should contain theSameElementsAs Set(
         "acl",
@@ -73,6 +72,23 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers {
         "x-amz-meta-consuming-service",
         "x-amz-signature"
       )
+    }
+
+    "include upload redirect URLs when specified" in {
+      val result = testInstance.prepareUpload(uploadSettings.copy(
+        errorRedirect = Some("https://www.example.com/error"),
+        successRedirect = Some("https://www.example.com/success")
+      ), userAgent)
+
+      result.uploadRequest.fields.get("error_action_redirect") should contain ("https://www.example.com/error")
+      result.uploadRequest.fields.get("success_action_redirect") should contain ("https://www.example.com/success")
+    }
+
+    "include the expected content type when specified" in {
+      val result = testInstance.prepareUpload(uploadSettings.copy(expectedContentType = Some("application/pdf")),
+        userAgent)
+
+      result.uploadRequest.fields.get(CONTENT_TYPE) should contain ("application/pdf")
     }
   }
 
