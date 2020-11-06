@@ -16,6 +16,8 @@
 
 package controllers
 
+import java.security.MessageDigest
+
 import akka.util.ByteString
 import javax.inject.Inject
 import model.FileId
@@ -34,9 +36,15 @@ class DownloadController @Inject()(storageService: FileStorageService, cc: Contr
     val result: Result = (for {
       source <- storageService.get(FileId(fileId))
     } yield {
+
+      val md    = MessageDigest.getInstance("MD5")
+      val bytes = source.body
+      md.update(bytes)
+      val etag    = md.digest().map("%02x".format(_)).mkString
+
       Result(
-        header = ResponseHeader(200, Map.empty),
-        body   = HttpEntity.Strict(ByteString(source.body), None)
+        header = ResponseHeader(200, Map("ETag" -> s""""$etag"""")),
+        body   = HttpEntity.Strict(ByteString(bytes), None)
       )
     }) getOrElse NotFound
 
