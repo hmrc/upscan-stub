@@ -33,7 +33,6 @@ import services._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import utils.ApplicativeHelpers
 
-import scala.concurrent.ExecutionContext
 import scala.xml.Node
 
 class UploadController @Inject()(
@@ -41,7 +40,7 @@ class UploadController @Inject()(
   notificationQueueProcessor: NotificationQueueProcessor,
   virusScanner: VirusScanner,
   clock: Clock,
-  cc: ControllerComponents)(implicit ec: ExecutionContext)
+  cc: ControllerComponents)
     extends BackendController(cc) {
 
   private val logger = Logger(this.getClass)
