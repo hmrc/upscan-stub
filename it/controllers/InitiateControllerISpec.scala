@@ -3,7 +3,7 @@ package controllers
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model.initiate.PrepareUploadResponse
-import org.scalatest.GivenWhenThen
+import org.scalatest.{GivenWhenThen, OptionValues}
 import org.scalatest.matchers.Matcher
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -17,7 +17,7 @@ import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 
 import scala.concurrent.duration._
 
-class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen {
+class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen with OptionValues {
 
   private implicit val actorSystem: ActorSystem        = ActorSystem()
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -229,7 +229,7 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       fields should contain key "x-amz-signature"
       fields.get("x-amz-meta-consuming-service") should contain ("InitiateControllerISpec")
       fields.get("x-amz-meta-callback-url") should contain ("http://localhost:9570/callback")
-      fields.get("success_action_redirect") should contain ("https://www.example.com/nextpage")
+      fields.get("success_action_redirect").value should startWith("https://www.example.com/nextpage?key=")
       fields.get("Content-Type") should contain (XML)
       responseFieldsMatcher.foreach(matchExpectations => fields should matchExpectations)
     }
