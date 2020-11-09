@@ -17,13 +17,14 @@
 package services
 
 import model.initiate.{PrepareUploadResponse, UploadSettings}
+import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.HeaderNames.CONTENT_TYPE
 import play.api.libs.json.{JsValue, Json}
 import utils.Implicits._
 
-class PrepareUploadServiceSpec extends AnyWordSpec with Matchers {
+class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValues {
   "PrepareUploadService.prepareUpload" should {
     val testInstance = new PrepareUploadService()
     val userAgent    = Some("PrepareUploadServiceSpec")
@@ -81,7 +82,7 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers {
       ), userAgent)
 
       result.uploadRequest.fields.get("error_action_redirect") should contain ("https://www.example.com/error")
-      result.uploadRequest.fields.get("success_action_redirect") should contain ("https://www.example.com/success")
+      result.uploadRequest.fields.get("success_action_redirect").value should startWith("https://www.example.com/success?key=")
     }
 
     "include the expected content type when specified" in {
