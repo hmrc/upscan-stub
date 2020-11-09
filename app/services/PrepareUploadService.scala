@@ -51,7 +51,7 @@ class PrepareUploadService @Inject()() {
           "x-amz-meta-callback-url" -> settings.callbackUrl,
           "x-amz-signature"         -> "xxxx"
         ) ++ settings.expectedContentType.map { "Content-Type" -> _ }
-          ++ settings.successRedirect.map("success_action_redirect" -> _)
+          ++ settings.successRedirect.map(u => "success_action_redirect" -> s"$u?key=${reference.value}")
           ++ settings.errorRedirect.map("error_action_redirect"     -> _)
           ++ consumingService.map { "x-amz-meta-consuming-service" -> _ }
       )
