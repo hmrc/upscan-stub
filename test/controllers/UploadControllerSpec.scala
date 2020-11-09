@@ -35,7 +35,7 @@ import services._
 import test.utils.CreateTempFileFromResource
 import utils.Implicits.Base64StringOps
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.xml.Elem
 
 class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
@@ -83,8 +83,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
-          ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -147,8 +146,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
-          ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -211,8 +209,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       Mockito.when(virusScanner.checkIfClean(any())).thenReturn(VirusFound("This test file failed scanning"))
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
-          ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -261,8 +258,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
-          ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -306,8 +302,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())(
-          ExecutionContext.Implicits.global)
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)

@@ -27,11 +27,11 @@ import play.api.mvc.{Action, ControllerComponents, Result}
 import services.PrepareUploadService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 class InitiateController @Inject()(prepareUploadService: PrepareUploadService, cc: ControllerComponents)
-                                  (implicit ec: ExecutionContext)
+
   extends BackendController(cc)
   with UserAgentFilter {
 
