@@ -16,6 +16,7 @@
 
 package services
 
+import java.net.URISyntaxException
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, ZoneOffset}
 import java.util.UUID
@@ -23,6 +24,7 @@ import java.util.UUID
 import javax.inject.Inject
 import model._
 import model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
+import org.apache.http.client.utils.URIBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
 
 class PrepareUploadService @Inject()() {
@@ -51,12 +53,22 @@ class PrepareUploadService @Inject()() {
           "x-amz-meta-callback-url" -> settings.callbackUrl,
           "x-amz-signature"         -> "xxxx"
         ) ++ settings.expectedContentType.map { "Content-Type" -> _ }
-          ++ settings.successRedirect.map(u => "success_action_redirect" -> s"$u?key=${reference.value}")
+          ++ settings.successRedirect.map("success_action_redirect" -> successRedirectWithReference(_, reference))
           ++ settings.errorRedirect.map("error_action_redirect"     -> _)
           ++ consumingService.map { "x-amz-meta-consuming-service" -> _ }
       )
     )
   }
+
+  private def successRedirectWithReference(successRedirect: String, reference: Reference): String =
+    try {
+      val builder = new URIBuilder(successRedirect)
+      builder.addParameter("key", reference.value)
+      builder.build().toASCIIString
+    } catch {
+      // retain existing behaviour and continue with an unadulterated (but invalid) successRedirect URL
+      case _: URISyntaxException => successRedirect
+    }
 
   private def generateReference(): Reference = Reference(UUID.randomUUID().toString)
 

@@ -17,6 +17,7 @@
 package services
 
 import model.initiate.{PrepareUploadResponse, UploadSettings}
+import org.apache.http.client.utils.URIBuilder
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -83,6 +84,23 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
 
       result.uploadRequest.fields.get("error_action_redirect") should contain ("https://www.example.com/error")
       result.uploadRequest.fields.get("success_action_redirect").value should startWith("https://www.example.com/success?key=")
+    }
+
+    "retain any existing query parameters on upload redirect URLs when specified" in {
+      val result = testInstance.prepareUpload(uploadSettings.copy(
+        errorRedirect = Some("https://www.example.com/error?upload=1234"),
+        successRedirect = Some("https://www.example.com/success?upload=1234")
+      ), userAgent)
+
+      import scala.collection.JavaConverters._
+      val successActionRedirectUrl = result.uploadRequest.fields.get("success_action_redirect").map(new URIBuilder(_)).value
+      val successActionQueryParams = successActionRedirectUrl.getQueryParams.asScala
+
+      result.uploadRequest.fields.get("error_action_redirect") should contain ("https://www.example.com/error?upload=1234")
+
+      successActionQueryParams.map(_.getName) should contain theSameElementsAs Seq("upload", "key")
+      successActionQueryParams.exists(qp => qp.getName == "upload" && qp.getValue == "1234") shouldBe true
+      successActionRedirectUrl.clearParameters().build().toASCIIString shouldBe "https://www.example.com/success"
     }
 
     "include the expected content type when specified" in {
