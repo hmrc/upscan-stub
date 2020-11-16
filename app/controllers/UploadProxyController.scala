@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import akka.stream.IOResult
 import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
+import controllers.UploadProxyController.ErrorResponseHandler.proxyErrorResponse
 import javax.inject.Inject
 import org.apache.http.client.utils.URIBuilder
 import play.api.libs.Files.TemporaryFile
@@ -50,7 +51,7 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
           .post(Source(dataParts(request.body.dataParts) ++ fileParts(request.body.files)))
         response.map {
           case r if r.status >= 200 && r.status < 400 => toSuccessResult(r)
-          case r                                      => ErrorResponseHandler.proxyErrorResponse(errorAction, r.status, r.body)
+          case r                                      => proxyErrorResponse(errorAction, r.status, r.body, r.headers)
         }
       }
     )
@@ -62,11 +63,8 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
   private def fileParts(filePart: Seq[FilePart[TemporaryFile]]): List[FilePart[Source[ByteString, Future[IOResult]]]] =
     filePart.map(d => FilePart(d.key, d.filename, d.contentType, FileIO.fromPath(d.ref.path))).toList
 
-  private def toSuccessResult(response: WSResponse): Result = {
-    val headers = response.headers.toList.flatMap { case (h, v) => v.map((h, _)) }
-    Results.Status(response.status)(response.body).withHeaders(headers: _*)
-  }
-
+  private def toSuccessResult(response: WSResponse): Result =
+    Results.Status(response.status)(response.body).withHeaders(asTuples(response.headers): _*)
 }
 
 private object UploadProxyController {
@@ -112,12 +110,25 @@ private object UploadProxyController {
 
   object ErrorResponseHandler {
 
-    def proxyErrorResponse(errorAction: ErrorAction, statusCode: Int, xmlResponseBody: String): Result = {
-      val responseFields = toErrorFields(errorAction.key, xmlResponseBody)
-      errorAction.redirectUrl.fold(ifEmpty = jsonResult(statusCode, responseFields)) { redirectUrl =>
-        redirectResult(redirectUrl, responseFields)
-      }
+    def proxyErrorResponse(errorAction: ErrorAction,
+                           statusCode: Int,
+                           xmlResponseBody: String,
+                           responseHeaders: Map[String, Seq[String]]): Result = {
+      val errorFields = toErrorFields(errorAction.key, xmlResponseBody)
+      val exposableHeaders = responseHeaders.filter { case (name, _ ) => isExposableResponseHeader(name) }
+      errorAction.redirectUrl.fold(ifEmpty = jsonResult(statusCode, errorFields)) { redirectUrl =>
+        redirectResult(redirectUrl, queryParams = errorFields)
+      }.withHeaders(asTuples(exposableHeaders): _*)
     }
+
+    /*
+     * This is a dummy placeholder to draw attention to the fact that filtering of error response headers is
+     * required in the real implementation.  We currently retain only CORS-related headers and custom Amazon
+     * headers.  The implementation in this stub differs.  This stub has a CORS filter (the real implementation
+     * does not), and our UploadController does not add any fake Amazon headers - so we actually have nothing
+     * to do here ...
+     */
+    private def isExposableResponseHeader(name: String): Boolean = false
 
     private def jsonResult(statusCode: Int, fields: Seq[(String, String)]): Result =
       Results.Status(statusCode)(Json.toJsObject(fields.toMap))
@@ -144,4 +155,7 @@ private object UploadProxyController {
     private def makeOptionalField(elemType: String, xml: Elem): Option[(String, String)] =
       (xml \ elemType).headOption.map(node => s"error$elemType" -> node.text)
   }
+
+  def asTuples(values: Map[String, Seq[String]]): Seq[(String, String)] =
+    values.toList.flatMap { case (h, v) => v.map((h, _)) }
 }
