@@ -32,6 +32,7 @@ import play.api.mvc._
 import services._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import utils.ApplicativeHelpers
+import utils.MultipartFormDataSummaries.{summariseDataParts, summariseFileParts}
 
 import scala.xml.Node
 
@@ -60,6 +61,7 @@ class UploadController @Inject()(
   )
 
   def upload(): Action[MultipartFormData[TemporaryFile]] = Action(parse.multipartFormData) { implicit request =>
+    logger.debug(s"Upload form contains dataParts=${summariseDataParts(request.body.dataParts)} and fileParts=${summariseFileParts(request.body.files)}")
     val validatedForm: Either[Seq[String], UploadPostForm] = uploadForm
       .bindFromRequest()
       .fold(
@@ -139,7 +141,7 @@ class UploadController @Inject()(
     val foundVirus: ScanningResult = virusScanner.checkIfClean(storedFile)
 
     val fileData = foundVirus match {
-      case Clean => {
+      case Clean =>
         val fileUploadDetails = UploadDetails(
           clock.instant(),
           generateChecksum(storedFile.body),
@@ -151,7 +153,6 @@ class UploadController @Inject()(
           downloadUrl   = new URL(buildDownloadUrl(fileId = fileId)),
           uploadDetails = fileUploadDetails
         )
-      }
       case VirusFound(details) =>
         QuarantinedFile(
           callbackUrl = new URL(form.callbackUrl),
@@ -161,7 +162,6 @@ class UploadController @Inject()(
     }
 
     notificationQueueProcessor.enqueueNotification(fileData)
-
   }
 
   private def mapFilenameToMimeType(filename: String): String =
