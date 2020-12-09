@@ -18,19 +18,21 @@ package controllers
 
 import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
-
 import akka.stream.IOResult
 import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
 import controllers.UploadProxyController.ErrorResponseHandler.proxyErrorResponse
+
 import javax.inject.Inject
 import org.apache.http.client.utils.URIBuilder
+import play.api.Logger
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import utils.MultipartFormDataSummaries.{summariseDataParts, summariseFileParts}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -41,14 +43,19 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
 
   import UploadProxyController._
 
+  private val logger = Logger(this.getClass)
+
   def upload(): Action[MultipartFormData[TemporaryFile]] = Action.async(parse.multipartFormData) { implicit request =>
-    MultipartFormExtractor.extractErrorAction(request.body).fold(
+    val body = request.body
+    logger.debug(s"Upload form contains dataParts=${summariseDataParts(body.dataParts)} and fileParts=${summariseFileParts(body.files)}")
+    MultipartFormExtractor.extractErrorAction(body).fold(
       errorResult => Future.successful(errorResult),
       errorAction => {
         val response = wsClient
           .url(routes.UploadController.upload().absoluteURL())
           .withFollowRedirects(follow = false)
-          .post(Source(dataParts(request.body.dataParts) ++ fileParts(request.body.files)))
+          .post(Source(dataParts(body.dataParts) ++ fileParts(body.files)))
+        response.foreach(r => logger.debug(s"Upload response has status=[${r.status}], headers=[${r.headers}], body=[${r.body}]"))
         response.map {
           case r if r.status >= 200 && r.status < 400 => toSuccessResult(r)
           case r                                      => proxyErrorResponse(errorAction, r.status, r.body, r.headers)
