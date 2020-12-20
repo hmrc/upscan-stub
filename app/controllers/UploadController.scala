@@ -83,7 +83,7 @@ class UploadController @Inject()(
       ApplicativeHelpers.product(validatedForm, validatedFile)
 
     validatedInput.fold(
-      errors => BadRequest(invalidRequestBody("400", errors.mkString(", "))),
+      errors => BadRequest(invalidRequestBody("InvalidArgument", errors.mkString(", "))),
       validInput =>
         withPolicyChecked(validInput._1, validInput._2) {
           storeAndNotify(validInput._1, validInput._2)
