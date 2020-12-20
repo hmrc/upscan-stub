@@ -177,12 +177,12 @@ class UploadController @Inject()(
     routes.DownloadController.download(fileId.value).absoluteURL()
 
   private def invalidRequestBody(code: String, message: String): Node =
-    xml.XML.loadString(s"""<Error>
-      <Code>$code</Code>
-      <Message>$message</Message>
+    <Error>
+      <Code>{code}</Code>
+      <Message>{message}</Message>
       <Resource>NoFileReference</Resource>
       <RequestId>SomeRequestId</RequestId>
-    </Error>""")
+    </Error>
 
   def generateChecksum(fileBytes: Array[Byte]): String = {
     val checksum = MessageDigest.getInstance("SHA-256").digest(fileBytes)
