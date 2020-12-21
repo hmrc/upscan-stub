@@ -26,7 +26,7 @@ class UpscanStubModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
     bind[NotificationSender].to[HttpNotificationSender],
     bind[NotificationQueueProcessor].toProvider[NotificationQueueProcessorProvider].in[Singleton],
-    bind(classOf[Clock]).toInstance(Clock.systemDefaultZone)
+    bind[Clock].toInstance(Clock.systemDefaultZone)
   )
 
 }

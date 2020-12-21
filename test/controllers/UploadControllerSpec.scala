@@ -272,7 +272,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (uploadBodyAsXml \\ "Code").head.text      shouldBe "400"
+      (uploadBodyAsXml \\ "Code").head.text      shouldBe "InvalidArgument"
       (uploadBodyAsXml \\ "Message").head.text   shouldBe "FormError(policy,List(error.required),List()), FormError(acl,List(error.required),List()), FormError(key,List(error.required),List())"
       (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
@@ -316,7 +316,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (uploadBodyAsXml \\ "Code").head.text      shouldBe "400"
+      (uploadBodyAsXml \\ "Code").head.text      shouldBe "InvalidArgument"
       (uploadBodyAsXml \\ "Message").head.text   shouldBe "'file' field not found"
       (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
