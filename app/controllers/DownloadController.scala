@@ -17,13 +17,13 @@
 package controllers
 
 import java.security.MessageDigest
-
 import akka.util.ByteString
+
 import javax.inject.Inject
 import model.FileId
 import play.api.Logger
 import play.api.http.HttpEntity
-import play.api.mvc.{ControllerComponents, ResponseHeader, Result}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, ResponseHeader, Result}
 import services.FileStorageService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -31,7 +31,7 @@ class DownloadController @Inject()(storageService: FileStorageService, cc: Contr
 
   private val logger = Logger(this.getClass)
 
-  def download(fileId: String) = Action {
+  def download(fileId: String): Action[AnyContent] = Action {
 
     val result: Result = (for {
       source <- storageService.get(FileId(fileId))
@@ -48,7 +48,7 @@ class DownloadController @Inject()(storageService: FileStorageService, cc: Contr
       )
     }) getOrElse NotFound
 
-    logger.debug(s"Download request for file reference: [${fileId}], returning status: [${result.header.status}].")
+    logger.debug(s"Download request for Key=[$fileId], returning status: [${result.header.status}].")
 
     result
   }

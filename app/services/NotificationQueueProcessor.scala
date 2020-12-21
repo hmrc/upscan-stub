@@ -67,17 +67,17 @@ class QueueProcessingActor(notificationSender: NotificationSender, maximumRetryC
       queue = queue.enqueue(file)
       processQueue()
     case NotificationProcessedSuccessfully(notification) =>
-      log.info(s"Notification $notification sent successfully")
+      log.info(s"Notification for Key=[${notification.fileData.reference.value}] sent successfully [$notification]")
       running = false
       processQueue()
     case NotificationProcessingFailed(error, notification) =>
       running = false
       processQueue()
       if (notification.retryCount < maximumRetryCount) {
-        log.warning(s"Sending notification $notification failed. Retrying", error)
+        log.warning(s"Sending notification for Key=[${notification.fileData.reference.value}] failed [$notification]. Retrying", error)
         context.system.scheduler.scheduleOnce(retryDelay, self, EnqueueNotification(notification.retried))
       } else {
-        log.warning(s"Sending notification $notification failed. Retry limit reached", error)
+        log.warning(s"Sending notification for Key=[${notification.fileData.reference.value}] failed [$notification]. Retry limit reached", error)
       }
   }
 

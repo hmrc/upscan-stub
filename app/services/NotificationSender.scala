@@ -99,8 +99,8 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
       .POST[ReadyCallbackBody, HttpResponse](uploadedFile.callbackUrl.toString, callback)
       .map { httpResponse =>
         logger.info(
-          s"""File ready notification: [${callback}], sent to service with callbackUrl: [${uploadedFile.callbackUrl}].
-             | Response status was: [${httpResponse.status}].""".stripMargin
+          s"""File ready notification for Key=[${uploadedFile.reference.value}] sent to service with callbackUrl: [${uploadedFile.callbackUrl}].
+             |Notification=[$callback].  Response status was: [${httpResponse.status}].""".stripMargin
         )
       }
   }
@@ -116,8 +116,8 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
       .POST[FailedCallbackBody, HttpResponse](quarantinedFile.callbackUrl.toString, callback)
       .map { httpResponse =>
         logger.info(
-          s"""File failed notification: [${callback}], sent to service with callbackUrl: [${quarantinedFile.callbackUrl}].
-             | Response status was: [${httpResponse.status}].""".stripMargin
+          s"""File failed notification for Key=[${quarantinedFile.reference.value}] sent to service with callbackUrl: [${quarantinedFile.callbackUrl}].
+             |Notification=[$callback].  Response status was: [${httpResponse.status}].""".stripMargin
         )
       }
   }
