@@ -52,13 +52,14 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
       Action.async(parse.json) { implicit request =>
         withJsonBody[T] { prepareUpload: T =>
           withAllowedCallbackProtocol(prepareUpload.callbackUrl) {
-            logger.debug(s"Received initiate request: [$prepareUpload].")
+            val consumingService = request.headers.get(USER_AGENT)
+            logger.debug(s"Received initiate request: [$prepareUpload] from [$consumingService].")
             val url = prepareUpload match {
               case _: PrepareUploadRequestV1 => routes.UploadController.upload().absoluteURL
               case _: PrepareUploadRequestV2 => routes.UploadProxyController.upload().absoluteURL
             }
-            val result = prepareUploadService.prepareUpload(prepareUpload.toUploadSettings(url),
-              request.headers.get(USER_AGENT))
+            val result = prepareUploadService.prepareUpload(prepareUpload.toUploadSettings(url), consumingService)
+            logger.debug(s"Prepared initiate upload response with Key=[${result.reference.value}]")
             Future.successful(Ok(Json.toJson(result)(PrepareUploadResponse.format)))
           }
         }

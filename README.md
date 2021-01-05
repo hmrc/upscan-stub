@@ -49,8 +49,8 @@ It is possible to test the upload of a virus-infected file using a test file inc
 If you're using the [Sophos Home](http://home.sophos.com) antivirus application on your laptop, then you may find the software automatically quarantines the virus infected test file mentioned above.
 ###### 1. Quarantining virus test resources
 Each time you pull from git, Sophos may delete ```test/resources/eicar-standard-av-test-file.txt```.
-To avoid this, you can whitelist the file on the [Sophos Dashboard](https://cloud.sophos.com/manage/home).
-**Note:** you will need to whitelist the copy of the file built to `/target` as well. i.e. both of:
+To avoid this, you can allowlist the file on the [Sophos Dashboard](https://cloud.sophos.com/manage/home).
+**Note:** you will need to allowlist the copy of the file built to `/target` as well. i.e. both of:
 ```
 test/resources/eicar-standard-av-test-file.txt
 target/scala-2.11/test-classes/eicar-standard-av-test-file.txt
