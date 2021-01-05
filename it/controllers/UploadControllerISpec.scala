@@ -132,7 +132,7 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (uploadBodyAsXml \\ "Code").head.text      shouldBe "400"
+      (uploadBodyAsXml \\ "Code").head.text      shouldBe "InvalidArgument"
       (uploadBodyAsXml \\ "Message").head.text   shouldBe "FormError(x-amz-meta-callback-url,List(error.required),List())"
       (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
@@ -170,7 +170,7 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
       (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (uploadBodyAsXml \\ "Code").head.text      shouldBe "400"
+      (uploadBodyAsXml \\ "Code").head.text      shouldBe "InvalidArgument"
       (uploadBodyAsXml \\ "Message").head.text   shouldBe "'file' field not found"
       (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
