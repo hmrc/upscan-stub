@@ -64,7 +64,13 @@ sealed trait ProcessedFile {
   def reference: Reference
 }
 
-case class UploadDetails(uploadTimestamp: Instant, checksum: String, fileMimeType: String, fileName: String)
+case class UploadDetails(
+  uploadTimestamp: Instant,
+  checksum: String,
+  fileMimeType: String,
+  fileName: String,
+  size: Long
+)
 
 object UploadDetails {
   implicit val writesUploadDetails: Writes[UploadDetails] = Json.writes[UploadDetails]

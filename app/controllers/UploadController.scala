@@ -146,7 +146,9 @@ class UploadController @Inject()(
           clock.instant(),
           generateChecksum(storedFile.body),
           mapFilenameToMimeType(filename = file.filename),
-          file.filename)
+          file.filename,
+          file.fileSize
+        )
         UploadedFile(
           callbackUrl   = new URL(form.callbackUrl),
           reference     = reference,

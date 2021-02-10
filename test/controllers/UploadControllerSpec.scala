@@ -18,7 +18,6 @@ package controllers
 
 import java.net.URL
 import java.time.{Clock, Instant, ZoneId}
-
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import model._
@@ -50,18 +49,20 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
     "upload a successfully POSTed form and file" in {
 
       Given("a valid form containing a valid file")
-      val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
-          "file",
-          "text-to-upload.pdf",
-          None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
+      val fileToUpload = CreateTempFileFromResource("/text-to-upload.txt")
+      val filePart = new MultipartFormData.FilePart[TemporaryFile](
+        key = "file",
+        filename = "text-to-upload.pdf",
+        contentType = None,
+        fileToUpload,
+        fileSize = fileToUpload.length()
+      )
+      val formDataBody = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -99,10 +100,12 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
           Reference("file-key"),
           new URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
-            initiateDate,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "application/pdf",
-            "text-to-upload.pdf")
+            uploadTimestamp = initiateDate,
+            checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            fileMimeType = "application/pdf",
+            fileName = "text-to-upload.pdf",
+            size = fileToUpload.length()
+          )
         ))
 
       And("a No Content response should be returned")
@@ -112,18 +115,20 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
 
     "return HTTP redirect when redirect after success requested" in {
       Given("a valid form containing a valid file")
-      val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
-          "file",
-          "text-to-upload.pdf",
-          None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
+      val fileToUpload = CreateTempFileFromResource("/text-to-upload.txt")
+      val filePart = new MultipartFormData.FilePart[TemporaryFile](
+        key = "file",
+        filename = "text-to-upload.pdf",
+        contentType = None,
+        fileToUpload,
+        fileSize = fileToUpload.length()
+      )
+      val formDataBody = new MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -162,10 +167,12 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
           Reference("file-key"),
           new URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
-            initiateDate,
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "application/pdf",
-            "text-to-upload.pdf")
+            uploadTimestamp = initiateDate,
+            checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            fileMimeType = "application/pdf",
+            fileName = "text-to-upload.pdf",
+            size = fileToUpload.length()
+          )
         ))
 
       And("a See Other response should be returned")
