@@ -16,10 +16,6 @@
 
 package services
 
-import java.net.URL
-import java.time.Instant
-import java.util.concurrent.atomic.AtomicInteger
-
 import akka.actor.ActorSystem
 import model.{ProcessedFile, Reference, UploadDetails, UploadedFile}
 import org.scalatest.BeforeAndAfterAll
@@ -27,6 +23,9 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import java.net.URL
+import java.time.Instant
+import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -73,21 +72,21 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
           new URL("http://127.0.0.1/callback"),
           Reference("REF1"),
           new URL("http://127.0.0.1/download"),
-          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+          UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 123L)
         )
       val file2 =
         UploadedFile(
           new URL("http://127.0.0.1/callback"),
           Reference("REF2"),
           new URL("http://127.0.0.1/download"),
-          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+          UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 456L)
         )
       val file3 =
         UploadedFile(
           new URL("http://127.0.0.1/callback"),
           Reference("REF3"),
           new URL("http://127.0.0.1/download"),
-          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+          UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 789L)
         )
 
       processor.enqueueNotification(file1)
@@ -98,7 +97,7 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
         notificationService.successfulNotifications.size shouldBe 3
       }
 
-      notificationService.successfulNotifications.values should contain allOf (file1, file2, file3)
+      notificationService.successfulNotifications.values.toSeq should contain theSameElementsInOrderAs Seq(file1, file2, file3)
 
     }
 
@@ -113,7 +112,7 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
           new URL("http://callback"),
           Reference("REF1"),
           new URL("http://download"),
-          UploadDetails(initiateDate, "12345", "application/pdf", "test.pdf")
+          UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 123L)
         )
 
       processor.enqueueNotification(file)
@@ -134,7 +133,7 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
           new URL("http://callback"),
           Reference("REF1"),
           new URL("http://download"),
-          UploadDetails(initiateDate, "12345", "applicaiton/pdf", "test.pdf")
+          UploadDetails(initiateDate, checksum = "12345", "applicaiton/pdf", "test.pdf", size = 123L)
         )
 
       processor.enqueueNotification(file)

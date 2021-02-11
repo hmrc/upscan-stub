@@ -94,9 +94,9 @@ class NotificationSenderISpec
       val fileReference = response.uploadRequest.fields("key")
 
       And("an uploaded request is posted to the returned /upload endpoint")
+      val fileContents = "End to end notification test contents".getBytes
       val file = SingletonTemporaryFileCreator.create("my-it-file", ".txt")
-
-      Files.write(file.toPath, "End to end notification test contents".getBytes)
+      Files.write(file.toPath, fileContents)
 
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile]("file", "my-it-file.pdf", None, file)
@@ -121,7 +121,8 @@ class NotificationSenderISpec
               "uploadTimestamp" -> "2018-04-24T09:30:00Z",
               "checksum"        -> "2f8a8ceeec0dc64ffaca269f55e74699bee881749de20cdb9631f8fcc72f8a62",
               "fileMimeType"    -> "application/pdf",
-              "fileName"        -> "my-it-file.pdf"
+              "fileName"        -> "my-it-file.pdf",
+              "size"            -> fileContents.length
               //Excluding downloadUrl
             )
           )
