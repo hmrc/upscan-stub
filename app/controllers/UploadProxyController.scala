@@ -16,14 +16,11 @@
 
 package controllers
 
-import java.net.URI
-import java.nio.charset.StandardCharsets.UTF_8
 import akka.stream.IOResult
 import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
-import controllers.UploadProxyController.ErrorResponseHandler.proxyErrorResponse
-
-import javax.inject.Inject
+import controllers.Assets.INTERNAL_SERVER_ERROR
+import controllers.UploadProxyController.ErrorResponseHandler.{errorResponse, proxyErrorResponse}
 import org.apache.http.client.utils.URIBuilder
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
@@ -34,6 +31,10 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import utils.MultipartFormDataSummaries.{summariseDataParts, summariseFileParts}
 
+import java.net.URI
+import java.nio.charset.StandardCharsets.UTF_8
+import java.nio.file.{Files, Path}
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.xml.Elem
@@ -51,15 +52,33 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
     MultipartFormExtractor.extractErrorAction(body).fold(
       errorResult => Future.successful(errorResult),
       errorAction => {
-        val response = wsClient
-          .url(routes.UploadController.upload().absoluteURL())
-          .withFollowRedirects(follow = false)
-          .post(Source(dataParts(body.dataParts) ++ fileParts(body.files)))
-        response.foreach(r => logger.debug(s"Upload response has status=[${r.status}], headers=[${r.headers}], body=[${r.body}]"))
-        response.map {
-          case r if r.status >= 200 && r.status < 400 => toSuccessResult(r)
-          case r                                      => proxyErrorResponse(errorAction, r.status, r.body, r.headers)
+        val (fileAdoptionFailures, fileAdoptionSuccesses) = TemporaryFilePart.mapToFailuresAndSuccesses(body.files) { filePart =>
+          val tryAdoptFileResult = TemporaryFilePart.adoptFile(filePart)
+          tryAdoptFileResult.foreach { adoptedFilePart =>
+            logger.debug(s"Moved TemporaryFile for Key [${errorAction.key}] from [${filePart.ref.path}] to [${adoptedFilePart.ref}]")
+          }
+          tryAdoptFileResult
         }
+
+        val futResult = fileAdoptionFailures.headOption.fold {
+          val uploadBody = Source(dataParts(body.dataParts) ++ fileAdoptionSuccesses.map(TemporaryFilePart.toUploadSource))
+          proxyRequest(errorAction, uploadBody)
+        } { errorMessage =>
+          Future.successful(errorResponse(errorAction, errorMessage))
+        }
+
+        futResult.onComplete { _ =>
+          Future {
+            fileAdoptionSuccesses.foreach { filePart =>
+              TemporaryFilePart.deleteFile(filePart).fold(
+                err      => logger.warn(s"Failed to delete TemporaryFile for Key [${errorAction.key}] at [${filePart.ref}]", err),
+                didExist => if (didExist) logger.debug(s"Deleted TemporaryFile for Key [${errorAction.key}] at [${filePart.ref}]")
+              )
+            }
+          }
+        }
+
+        futResult
       }
     )
   }
@@ -67,8 +86,23 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
   private def dataParts(dataPart: Map[String, Seq[String]]): List[DataPart] =
     dataPart.flatMap { case (header, body) => body.map(DataPart(header, _)) }.toList
 
-  private def fileParts(filePart: Seq[FilePart[TemporaryFile]]): List[FilePart[Source[ByteString, Future[IOResult]]]] =
-    filePart.map(d => FilePart(d.key, d.filename, d.contentType, FileIO.fromPath(d.ref.path))).toList
+  private def proxyRequest(errorAction: ErrorAction,
+                           body: Source[MultipartFormData.Part[Source[ByteString, _]], _])
+                          (implicit request: RequestHeader): Future[Result] = {
+    val futResponse = wsClient
+      .url(routes.UploadController.upload().absoluteURL())
+      .withFollowRedirects(follow = false)
+      .post(body)
+
+    futResponse.foreach { r =>
+      logger.debug(s"Upload response for Key=[${errorAction.key}] has status=[${r.status}], headers=[${r.headers}], body=[${r.body}]")
+    }
+
+    futResponse.map {
+      case r if r.status >= 200 && r.status < 400 => toSuccessResult(r)
+      case r                                      => proxyErrorResponse(errorAction, r.status, r.body, r.headers)
+    }
+  }
 
   private def toSuccessResult(response: WSResponse): Result =
     Results.Status(response.status)(response.body).withHeaders(asTuples(response.headers): _*)
@@ -79,6 +113,41 @@ private object UploadProxyController {
   case class ErrorAction(redirectUrl: Option[String], key: String)
 
   private val KeyName = "key"
+
+  object TemporaryFilePart {
+    private val AdoptedFileSuffix = ".out"
+
+    def mapToFailuresAndSuccesses[A, B](fileParts: Seq[FilePart[A]])
+                                       (f: FilePart[A] => Try[FilePart[B]]): (Seq[String], Seq[FilePart[B]]) = {
+      val (failures, successes) = fileParts.map(f).partition(_.isFailure)
+      val failureResults = failures.map(_.failed.map(err => s"${err.getClass.getSimpleName}: ${err.getMessage}").get)
+      val successResults = successes.map(_.get)
+      (failureResults, successResults)
+    }
+
+    /*
+     * Play creates a TemporaryFile as the MultipartFormData is parsed.
+     * The file is "owned" by Play, is scoped to the request, and is subject to being deleted by a finalizer thread.
+     * We "adopt" the file by moving it.
+     * This gives us control of its lifetime at the expense of taking responsibility for cleaning it up.  If our
+     * cleanup fails, another cleanup will be attempted on shutDown by virtue of the fact that we have not moved
+     * the file outside of the playtempXXX folder.
+     *
+     * See: https://www.playframework.com/documentation/2.7.x/ScalaFileUpload#Uploading-files-in-a-form-using-multipart/form-data
+     * See: play.api.libs.Files$DefaultTemporaryFileCreator's FinalizableReferenceQueue & stopHook
+     */
+    def adoptFile(filePart: FilePart[TemporaryFile]): Try[FilePart[Path]] = {
+      val inPath = filePart.ref.path
+      val outPath = inPath.resolveSibling(inPath.getFileName + AdoptedFileSuffix)
+      Try(filePart.copy(ref = filePart.ref.atomicMoveFileWithFallback(outPath)))
+    }
+
+    def toUploadSource(filePart: FilePart[Path]): FilePart[Source[ByteString, Future[IOResult]]] =
+      filePart.copy(ref = FileIO.fromPath(filePart.ref))
+
+    def deleteFile(filePart: FilePart[Path]): Try[Boolean] =
+      Try(Files.deleteIfExists(filePart.ref))
+  }
 
   object MultipartFormExtractor {
 
@@ -117,11 +186,21 @@ private object UploadProxyController {
 
   object ErrorResponseHandler {
 
+    def errorResponse(errorAction: ErrorAction, message: String): Result = {
+      val errorFields = Seq(toKeyField(errorAction.key), fieldName(MessageElemType) -> message)
+      asErrorResult(errorAction, INTERNAL_SERVER_ERROR, errorFields)
+    }
+
     def proxyErrorResponse(errorAction: ErrorAction,
                            statusCode: Int,
                            xmlResponseBody: String,
-                           responseHeaders: Map[String, Seq[String]]): Result = {
-      val errorFields = toErrorFields(errorAction.key, xmlResponseBody)
+                           responseHeaders: Map[String, Seq[String]]): Result =
+      asErrorResult(errorAction, statusCode, toErrorFields(errorAction.key, xmlResponseBody), responseHeaders)
+
+    private def asErrorResult(errorAction: ErrorAction,
+                              statusCode: Int,
+                              errorFields: Seq[(String, String)],
+                              responseHeaders: Map[String, Seq[String]] = Map.empty): Result = {
       val exposableHeaders = responseHeaders.filter { case (name, _ ) => isExposableResponseHeader(name) }
       errorAction.redirectUrl.fold(ifEmpty = jsonResult(statusCode, errorFields)) { redirectUrl =>
         redirectResult(redirectUrl, queryParams = errorFields)
@@ -148,19 +227,26 @@ private object UploadProxyController {
     }
 
     private def toErrorFields(key: String, xmlResponseBody: String): Seq[(String, String)] =
-      (KeyName -> key) +: xmlErrorFields(xmlResponseBody)
+      toKeyField(key) +: xmlErrorFields(xmlResponseBody)
+
+    private def toKeyField(key: String): (String, String) =
+      KeyName -> key
+
+    private val MessageElemType = "Message"
 
     private def xmlErrorFields(xmlBody: String): Seq[(String, String)] =
       Try(scala.xml.XML.loadString(xmlBody)).toOption.toList.flatMap { xml =>
         val requestId = makeOptionalField("RequestId", xml)
         val resource  = makeOptionalField("Resource", xml)
-        val message   = makeOptionalField("Message", xml)
+        val message   = makeOptionalField(MessageElemType, xml)
         val code      = makeOptionalField("Code", xml)
         Seq(code, message, resource, requestId).flatten
       }
 
     private def makeOptionalField(elemType: String, xml: Elem): Option[(String, String)] =
-      (xml \ elemType).headOption.map(node => s"error$elemType" -> node.text)
+      (xml \ elemType).headOption.map(node => fieldName(elemType) -> node.text)
+
+    private def fieldName(elemType: String): String = s"error$elemType"
   }
 
   def asTuples(values: Map[String, Seq[String]]): Seq[(String, String)] =
