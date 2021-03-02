@@ -21,6 +21,7 @@ import akka.stream.scaladsl.{FileIO, Source}
 import akka.util.ByteString
 import controllers.Assets.INTERNAL_SERVER_ERROR
 import controllers.UploadProxyController.ErrorResponseHandler.{errorResponse, proxyErrorResponse}
+import controllers.UploadProxyController.TemporaryFilePart.partitionTrys
 import org.apache.http.client.utils.URIBuilder
 import play.api.Logger
 import play.api.libs.Files.TemporaryFile
@@ -36,7 +37,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.xml.Elem
 
 class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponents)
@@ -52,12 +53,13 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
     MultipartFormExtractor.extractErrorAction(body).fold(
       errorResult => Future.successful(errorResult),
       errorAction => {
-        val (fileAdoptionFailures, fileAdoptionSuccesses) = TemporaryFilePart.mapToFailuresAndSuccesses(body.files) { filePart =>
-          val tryAdoptFileResult = TemporaryFilePart.adoptFile(filePart)
-          tryAdoptFileResult.foreach { adoptedFilePart =>
-            logger.debug(s"Moved TemporaryFile for Key [${errorAction.key}] from [${filePart.ref.path}] to [${adoptedFilePart.ref}]")
+        val (fileAdoptionFailures, fileAdoptionSuccesses) = partitionTrys {
+          body.files.map { filePart =>
+            for {
+              adoptedFilePart <- TemporaryFilePart.adoptFile(filePart)
+              _ = logger.debug(s"Moved TemporaryFile for Key [${errorAction.key}] from [${filePart.ref.path}] to [${adoptedFilePart.ref}]")
+            } yield adoptedFilePart
           }
-          tryAdoptFileResult
         }
 
         val futResult = fileAdoptionFailures.headOption.fold {
@@ -88,21 +90,19 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
 
   private def proxyRequest(errorAction: ErrorAction,
                            body: Source[MultipartFormData.Part[Source[ByteString, _]], _])
-                          (implicit request: RequestHeader): Future[Result] = {
-    val futResponse = wsClient
-      .url(routes.UploadController.upload().absoluteURL())
-      .withFollowRedirects(follow = false)
-      .post(body)
+                          (implicit request: RequestHeader): Future[Result] =
+    for {
+      response <- wsClient
+        .url(routes.UploadController.upload().absoluteURL())
+        .withFollowRedirects(follow = false)
+        .post(body)
 
-    futResponse.foreach { r =>
-      logger.debug(s"Upload response for Key=[${errorAction.key}] has status=[${r.status}], headers=[${r.headers}], body=[${r.body}]")
-    }
-
-    futResponse.map {
+      _ = logger.debug(s"Upload response for Key=[${errorAction.key}] has status=[${response.status}], " +
+          s"headers=[${response.headers}], body=[${response.body}]")
+    } yield response match {
       case r if r.status >= 200 && r.status < 400 => toSuccessResult(r)
       case r                                      => proxyErrorResponse(errorAction, r.status, r.body, r.headers)
     }
-  }
 
   private def toSuccessResult(response: WSResponse): Result =
     Results.Status(response.status)(response.body).withHeaders(asTuples(response.headers): _*)
@@ -117,11 +117,9 @@ private object UploadProxyController {
   object TemporaryFilePart {
     private val AdoptedFileSuffix = ".out"
 
-    def mapToFailuresAndSuccesses[A, B](fileParts: Seq[FilePart[A]])
-                                       (f: FilePart[A] => Try[FilePart[B]]): (Seq[String], Seq[FilePart[B]]) = {
-      val (failures, successes) = fileParts.map(f).partition(_.isFailure)
-      val failureResults = failures.map(_.failed.map(err => s"${err.getClass.getSimpleName}: ${err.getMessage}").get)
-      val successResults = successes.map(_.get)
+    def partitionTrys[A](trys: Seq[Try[A]]): (Seq[String], Seq[A]) = {
+      val failureResults = trys.collect { case Failure(err) => s"${err.getClass.getSimpleName}: ${err.getMessage}" }
+      val successResults = trys.collect { case Success(a) => a }
       (failureResults, successResults)
     }
 
@@ -186,24 +184,25 @@ private object UploadProxyController {
 
   object ErrorResponseHandler {
 
-    def errorResponse(errorAction: ErrorAction, message: String): Result = {
-      val errorFields = Seq(toKeyField(errorAction.key), fieldName(MessageElemType) -> message)
-      asErrorResult(errorAction, INTERNAL_SERVER_ERROR, errorFields)
-    }
+    private val MessageField = "Message"
+
+    def errorResponse(errorAction: ErrorAction, message: String): Result =
+      asErrorResult(errorAction, INTERNAL_SERVER_ERROR, Map(fieldName(MessageField) -> message))
 
     def proxyErrorResponse(errorAction: ErrorAction,
                            statusCode: Int,
                            xmlResponseBody: String,
                            responseHeaders: Map[String, Seq[String]]): Result =
-      asErrorResult(errorAction, statusCode, toErrorFields(errorAction.key, xmlResponseBody), responseHeaders)
+      asErrorResult(errorAction, statusCode, xmlErrorFields(xmlResponseBody).toMap, responseHeaders)
 
     private def asErrorResult(errorAction: ErrorAction,
                               statusCode: Int,
-                              errorFields: Seq[(String, String)],
+                              errorFields: Map[String, String],
                               responseHeaders: Map[String, Seq[String]] = Map.empty): Result = {
+      val resultFields = errorFields + (KeyName -> errorAction.key)
       val exposableHeaders = responseHeaders.filter { case (name, _ ) => isExposableResponseHeader(name) }
-      errorAction.redirectUrl.fold(ifEmpty = jsonResult(statusCode, errorFields)) { redirectUrl =>
-        redirectResult(redirectUrl, queryParams = errorFields)
+      errorAction.redirectUrl.fold(ifEmpty = jsonResult(statusCode, resultFields)) { redirectUrl =>
+        redirectResult(redirectUrl, queryParams = resultFields)
       }.withHeaders(asTuples(exposableHeaders): _*)
     }
 
@@ -216,29 +215,21 @@ private object UploadProxyController {
      */
     private def isExposableResponseHeader(name: String): Boolean = false
 
-    private def jsonResult(statusCode: Int, fields: Seq[(String, String)]): Result =
-      Results.Status(statusCode)(Json.toJsObject(fields.toMap))
+    private def jsonResult(statusCode: Int, fields: Map[String, String]): Result =
+      Results.Status(statusCode)(Json.toJsObject(fields))
 
-    private def redirectResult(url: String, queryParams: Seq[(String, String)]): Result = {
+    private def redirectResult(url: String, queryParams: Map[String, String]): Result = {
       val urlBuilder = queryParams.foldLeft(new URIBuilder(url)) { (urlBuilder, param) =>
         urlBuilder.addParameter(param._1, param._2)
       }
       Results.SeeOther(urlBuilder.build().toASCIIString)
     }
 
-    private def toErrorFields(key: String, xmlResponseBody: String): Seq[(String, String)] =
-      toKeyField(key) +: xmlErrorFields(xmlResponseBody)
-
-    private def toKeyField(key: String): (String, String) =
-      KeyName -> key
-
-    private val MessageElemType = "Message"
-
     private def xmlErrorFields(xmlBody: String): Seq[(String, String)] =
       Try(scala.xml.XML.loadString(xmlBody)).toOption.toList.flatMap { xml =>
         val requestId = makeOptionalField("RequestId", xml)
         val resource  = makeOptionalField("Resource", xml)
-        val message   = makeOptionalField(MessageElemType, xml)
+        val message   = makeOptionalField(MessageField, xml)
         val code      = makeOptionalField("Code", xml)
         Seq(code, message, resource, requestId).flatten
       }
