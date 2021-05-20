@@ -72,7 +72,9 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
         "x-amz-date",
         "x-amz-meta-callback-url",
         "x-amz-meta-consuming-service",
-        "x-amz-signature"
+        "x-amz-signature",
+        "x-amz-meta-upscan-initiate-response",
+        "x-amz-meta-upscan-initiate-received"
       )
     }
 

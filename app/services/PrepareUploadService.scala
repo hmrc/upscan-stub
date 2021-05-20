@@ -39,19 +39,22 @@ class PrepareUploadService @Inject()() {
     val reference = generateReference()
     val policy    = toPolicy(settings)
 
+    val now = Instant.now
     PrepareUploadResponse(
       reference = reference,
       uploadRequest = UploadFormTemplate(
         href = settings.uploadUrl,
         fields = Map(
-          "acl"                     -> "private",
-          "key"                     -> reference.value,
-          "policy"                  -> policy.asBase64String,
-          "x-amz-algorithm"         -> "AWS4-HMAC-SHA256",
-          "x-amz-credential"        -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
-          "x-amz-date"              -> dateTimeFormatter.format(Instant.now),
-          "x-amz-meta-callback-url" -> settings.callbackUrl,
-          "x-amz-signature"         -> "xxxx"
+          "acl"                                 -> "private",
+          "key"                                 -> reference.value,
+          "policy"                              -> policy.asBase64String,
+          "x-amz-algorithm"                     -> "AWS4-HMAC-SHA256",
+          "x-amz-credential"                    -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
+          "x-amz-date"                          -> dateTimeFormatter.format(now),
+          "x-amz-meta-upscan-initiate-received" -> now.toString,
+          "x-amz-meta-upscan-initiate-response" -> now.toString,
+          "x-amz-meta-callback-url"             -> settings.callbackUrl,
+          "x-amz-signature"                     -> "xxxx"
         ) ++ settings.expectedContentType.map { "Content-Type" -> _ }
           ++ settings.successRedirect.map("success_action_redirect" -> successRedirectWithReference(_, reference))
           ++ settings.errorRedirect.map("error_action_redirect"     -> _)
