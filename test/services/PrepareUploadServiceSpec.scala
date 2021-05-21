@@ -63,7 +63,11 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
     "include all required fields" in {
       val result = testInstance.prepareUpload(uploadSettings, userAgent)
 
-      result.uploadRequest.fields.keySet should contain theSameElementsAs Set(
+      val formFields = result.uploadRequest.fields
+
+      formFields.get("x-amz-meta-original-filename").value shouldBe s"$${filename}"
+
+      formFields.keySet should contain theSameElementsAs Set(
         "acl",
         "key",
         "policy",
@@ -74,7 +78,10 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
         "x-amz-meta-consuming-service",
         "x-amz-signature",
         "x-amz-meta-upscan-initiate-response",
-        "x-amz-meta-upscan-initiate-received"
+        "x-amz-meta-upscan-initiate-received",
+        "x-amz-meta-session-id",
+        "x-amz-meta-request-id",
+        "x-amz-meta-original-filename"
       )
     }
 

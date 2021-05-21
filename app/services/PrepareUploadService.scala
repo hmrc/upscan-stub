@@ -16,16 +16,16 @@
 
 package services
 
-import java.net.URISyntaxException
-import java.time.format.DateTimeFormatter
-import java.time.{Instant, ZoneOffset}
-import java.util.UUID
-
-import javax.inject.Inject
 import model._
 import model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import org.apache.http.client.utils.URIBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
+
+import java.net.URISyntaxException
+import java.time.format.DateTimeFormatter
+import java.time.{Instant, ZoneOffset}
+import java.util.UUID.randomUUID
+import javax.inject.Inject
 
 class PrepareUploadService @Inject()() {
   private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC)
@@ -51,10 +51,13 @@ class PrepareUploadService @Inject()() {
           "x-amz-algorithm"                     -> "AWS4-HMAC-SHA256",
           "x-amz-credential"                    -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
           "x-amz-date"                          -> dateTimeFormatter.format(now),
+          "x-amz-signature"                     -> "xxxx",
           "x-amz-meta-upscan-initiate-received" -> now.toString,
           "x-amz-meta-upscan-initiate-response" -> now.toString,
           "x-amz-meta-callback-url"             -> settings.callbackUrl,
-          "x-amz-signature"                     -> "xxxx"
+          "x-amz-meta-original-filename"        -> s"$${filename}",
+          "x-amz-meta-session-id"               -> randomUUID().toString,
+          "x-amz-meta-request-id"               -> randomUUID().toString,
         ) ++ settings.expectedContentType.map { "Content-Type" -> _ }
           ++ settings.successRedirect.map("success_action_redirect" -> successRedirectWithReference(_, reference))
           ++ settings.errorRedirect.map("error_action_redirect"     -> _)
@@ -73,7 +76,7 @@ class PrepareUploadService @Inject()() {
       case _: URISyntaxException => successRedirect
     }
 
-  private def generateReference(): Reference = Reference(UUID.randomUUID().toString)
+  private def generateReference(): Reference = Reference(randomUUID().toString)
 
   private def toPolicy(settings: UploadSettings): Policy = {
     val json = Json.obj(
