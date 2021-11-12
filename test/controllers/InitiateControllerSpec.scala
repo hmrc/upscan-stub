@@ -16,8 +16,8 @@
 
 package controllers
 
-import akka.actor.ActorSystem
 import akka.stream._
+import akka.stream.testkit.NoMaterializer
 import model.Reference
 import model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import org.mockito.ArgumentMatchers.any
@@ -42,8 +42,7 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
 
   import InitiateControllerSpec._
 
-  private implicit val actorSystem: ActorSystem        = ActorSystem()
-  private implicit val materializer: ActorMaterializer = ActorMaterializer()
+  private implicit val materializer: Materializer = NoMaterializer
 
   private val requestHeaders = (USER_AGENT, "InitiateControllerSpec")
 

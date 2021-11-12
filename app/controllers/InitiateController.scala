@@ -31,9 +31,8 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 class InitiateController @Inject()(prepareUploadService: PrepareUploadService, cc: ControllerComponents)
-
-  extends BackendController(cc)
-  with UserAgentFilter {
+    extends BackendController(cc)
+    with UserAgentFilter {
 
   private val logger = Logger(this.getClass)
 
@@ -55,8 +54,8 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
             val consumingService = request.headers.get(USER_AGENT)
             logger.debug(s"Received initiate request: [$prepareUpload] from [$consumingService].")
             val url = prepareUpload match {
-              case _: PrepareUploadRequestV1 => routes.UploadController.upload().absoluteURL
-              case _: PrepareUploadRequestV2 => routes.UploadProxyController.upload().absoluteURL
+              case _: PrepareUploadRequestV1 => routes.UploadController.upload.absoluteURL
+              case _: PrepareUploadRequestV2 => routes.UploadProxyController.upload.absoluteURL
             }
             val result = prepareUploadService.prepareUpload(prepareUpload.toUploadSettings(url), consumingService)
             logger.debug(s"Prepared initiate upload response with Key=[${result.reference.value}]")
