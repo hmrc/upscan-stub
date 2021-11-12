@@ -37,7 +37,7 @@ class FileStorageService {
 
   def store(temporaryFile: PlayFiles.TemporaryFile): FileId = {
     val fileId = FileId.generate()
-    temporaryFile.moveFileTo(buildFileLocation(fileId))
+    temporaryFile.moveTo(buildFileLocation(fileId))
     fileId
   }
 

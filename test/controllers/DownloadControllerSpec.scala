@@ -17,7 +17,8 @@
 package controllers
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
+import akka.stream.testkit.NoMaterializer
 import model.FileId
 import org.mockito.{Mockito, MockitoSugar}
 import org.scalatest.GivenWhenThen
@@ -33,7 +34,7 @@ import scala.concurrent.Future
 class DownloadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
 
   implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val materializer: Materializer      = NoMaterializer
 
   "DownloadController" should {
     "retrieve file from storage if available" in {

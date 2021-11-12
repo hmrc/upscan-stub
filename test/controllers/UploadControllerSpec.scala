@@ -18,8 +18,10 @@ package controllers
 
 import java.net.URL
 import java.time.{Clock, Instant, ZoneId}
+
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
+import akka.stream.testkit.NoMaterializer
 import model._
 import org.mockito.ArgumentMatchers.any
 import org.mockito.{Mockito, MockitoSugar}
@@ -40,7 +42,7 @@ import scala.xml.Elem
 class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
 
   implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  implicit val materializer: Materializer      = NoMaterializer
 
   private val initiateDate = Instant.parse("2018-04-24T09:30:00Z")
   private val testClock    = new TestClock(initiateDate)
