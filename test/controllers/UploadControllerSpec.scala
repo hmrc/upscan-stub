@@ -287,6 +287,53 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
     }
 
+    "redirect on a forced rejected upload" in {
+
+      Given("a valid form containing a valid file with forced error name schema")
+      val filePart =
+        new MultipartFormData.FilePart[TemporaryFile](
+          "file",
+          "reject.UnexpectedContent.txt",
+          None,
+          CreateTempFileFromResource("/text-to-upload.txt"))
+      val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
+        dataParts = Map(
+          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+          "x-amz-credential"        -> Seq("some-credentials"),
+          "x-amz-date"              -> Seq("20180517T113023Z"),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "x-amz-signature"         -> Seq("some-signature"),
+          "acl"                     -> Seq("private"),
+          "key"                     -> Seq("file-key"),
+          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback"),
+          "error_action_redirect" -> Seq("https://localhost")
+        ),
+        files    = Seq(filePart),
+        badParts = Nil
+      )
+      val uploadRequest = FakeRequest().withBody(formDataBody)
+
+      val storageService        = mock[FileStorageService]
+      val notificationProcessor = mock[NotificationQueueProcessor]
+      val virusScanner          = mock[VirusScanner]
+
+      val controller =
+        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
+
+      When("upload is called")
+      val uploadResult: Future[Result] = controller.upload()(uploadRequest)
+
+      Then("a Redirect response should be returned")
+      val uploadStatus = status(uploadResult)
+      uploadStatus shouldBe 303
+
+      And("the redirect url should contain error details")
+      val redirectUrl = redirectLocation(uploadResult).getOrElse("")
+      redirectUrl should include("key=file-key")
+      redirectUrl should include("errorCode=UnexpectedContent")
+      redirectUrl should include("errorMessage=")
+    }
+
     "error when no file in POSTed form" in {
 
       Given("a valid form containing a NO file")

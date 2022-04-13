@@ -33,3 +33,8 @@ test-result
 tmp
 .idea_modules
 bin
+.bloop
+.metals
+.vscode
+metals.sbt
+

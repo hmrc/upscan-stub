@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,8 @@ case class UploadPostForm(
   acl: String,
   key: String,
   callbackUrl: String,
-  redirectAfterSuccess: Option[String]
+  redirectAfterSuccess: Option[String],
+  redirectAfterError: Option[String] = None
 )
 
 //Internal model of uploaded file
@@ -81,7 +82,20 @@ case class UploadedFile(callbackUrl: URL, reference: Reference, downloadUrl: URL
 
 case class QuarantinedFile(callbackUrl: URL, reference: Reference, error: String) extends ProcessedFile
 
+case class RejectedFile(callbackUrl: URL, reference: Reference, error: String) extends ProcessedFile
+
+case class UnknownReasonFile(callbackUrl: URL, reference: Reference, error: String) extends ProcessedFile
+
 case class AWSError(code: String, message: String, requestId: String)
+
+sealed trait ForcedTestFileError
+
+case class ForcedTestFileErrorQuarantine(message: String) extends ForcedTestFileError
+
+case class ForcedTestFileErrorRejected(message: String) extends ForcedTestFileError
+
+case class ForcedTestFileErrorUnknown(message: String) extends ForcedTestFileError
+
 
 // Parse a json String representing an AWS policy, and extract the min/max values for the content-length-range condition.
 // This is assumed to be the first condition present in the array.
