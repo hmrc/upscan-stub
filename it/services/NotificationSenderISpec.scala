@@ -362,6 +362,73 @@ class NotificationSenderISpec
           postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
       }
     }
+
+    "initiate a request, upload a file, make a callback, and report the error for a simulated unknown file" in {
+
+      stubFor(
+        post(urlPathEqualTo("/upscan/callback"))
+          .willReturn(aResponse().withStatus(OK)))
+
+      Given("a valid initiate request")
+      val postBodyJson = Json.parse("""
+                                      |{
+                                      |	"callbackUrl": "http://localhost:9570/callback",
+                                      |	"minimumFileSize" : 0,
+                                      |	"maximumFileSize" : 1024,
+                                      |	"expectedContentType": "application/xml"
+                                      |}
+                                    """.stripMargin)
+
+      val initiateRequest =
+        FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
+
+      When("a request is posted to the /initiate endpoint")
+      val initiateResponse = route(fakeApplication, initiateRequest).get
+      status(initiateResponse) shouldBe 200
+      val response: PrepareUploadResponse =
+        contentAsJson(initiateResponse).as[PrepareUploadResponse](PrepareUploadResponse.format)
+
+      val uploadUrl = response.uploadRequest.href.replace("http://", "")
+      val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
+        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
+
+      val fileReference = response.uploadRequest.fields("key")
+
+      And("an uploaded request is posted to the returned /upload endpoint")
+      val content = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. "
+      val file       = SingletonTemporaryFileCreator.create("unknown.Foo", ".jpeg")
+      Files.write(file.toPath, content.getBytes)
+
+      val filePart =
+        new MultipartFormData.FilePart[TemporaryFile]("file", "unknown.Foo.jpeg", None, file)
+      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
+        dataParts = formFields,
+        files     = Seq(filePart),
+        badParts  = Nil
+      )
+
+      val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
+      implicit val writer = utils.MultipartFormDataWritable.writeable
+      val uploadResponse  = route(fakeApplication, uploadRequest).get
+      status(uploadResponse) shouldBe 204
+
+      And("a POST callback is received on the supplied callback URL detailing the unknown file")
+      eventually {
+        val expectedCallback = Json
+          .obj(
+            "reference"  -> fileReference,
+            "fileStatus" -> "FAILED",
+            "failureDetails" -> Json.obj(
+              "failureReason" -> "UNKNOWN",
+              "message"       -> "Foo"
+            )
+          )
+          .toString
+        verify(
+          1,
+          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
+      }
+    }
   
 }
 
