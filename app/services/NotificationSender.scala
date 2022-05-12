@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,10 +83,13 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
 
   private val logger = Logger(this.getClass)
 
-  override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] = uploadedFile match {
-    case f: UploadedFile    => notifySuccessfulCallback(f)
-    case f: QuarantinedFile => notifyFailedCallback(f)
-  }
+ override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
+    uploadedFile match {
+      case f: UploadedFile      => notifySuccessfulCallback(f)
+      case f: QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
+      case f: RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
+      case f: UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
+    }
 
   private def notifySuccessfulCallback(uploadedFile: UploadedFile): Future[Unit] = {
 
@@ -105,18 +108,23 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
       }
   }
 
-  private def notifyFailedCallback(quarantinedFile: QuarantinedFile): Future[Unit] = {
+  private def notifyFailedCallback(
+    reference: Reference,
+    failureReason: String,
+    error: String,
+    callbackUrl: URL
+  ): Future[Unit] = {
 
     implicit val hc: HeaderCarrier = HeaderCarrier()
-    val errorDetails               = ErrorDetails("QUARANTINE", quarantinedFile.error)
+    val errorDetails               = ErrorDetails(failureReason, error)
     val callback =
-      FailedCallbackBody(quarantinedFile.reference, failureDetails = errorDetails)
+      FailedCallbackBody(reference, failureDetails = errorDetails)
 
     httpClient
-      .POST[FailedCallbackBody, HttpResponse](quarantinedFile.callbackUrl.toString, callback)
+      .POST[FailedCallbackBody, HttpResponse](callbackUrl.toString, callback)
       .map { httpResponse =>
         logger.info(
-          s"""File failed notification for Key=[${quarantinedFile.reference.value}] sent to service with callbackUrl: [${quarantinedFile.callbackUrl}].
+          s"""File failed notification for Key=[${reference.value}] sent to service with callbackUrl: [${callbackUrl}].
              |Notification=[$callback].  Response status was: [${httpResponse.status}].""".stripMargin
         )
       }

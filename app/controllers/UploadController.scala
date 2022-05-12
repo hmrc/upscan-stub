@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,7 +56,8 @@ class UploadController @Inject()(
       "acl"                     -> nonEmptyText.verifying("Invalid acl", { "private" == _ }),
       "key"                     -> nonEmptyText,
       "x-amz-meta-callback-url" -> nonEmptyText,
-      "success_action_redirect" -> optional(text)
+      "success_action_redirect" -> optional(text),
+      "error_action_redirect"   -> optional(text)
     )(UploadPostForm.apply)(UploadPostForm.unapply)
   )
 
@@ -107,9 +108,24 @@ class UploadController @Inject()(
         case _ => None
       }
 
-    maybeInvalidContentLength match {
-      case Some(awsError) => BadRequest(invalidRequestBody(awsError.code, awsError.message))
-      case None           => block
+    val maybeForcedTestFileError: Option[AWSError] =
+      if (file.filename.startsWith("reject."))
+        Some(
+          AWSError(
+            file.filename.drop(7).takeWhile(_ != '.'),
+            "we were instructed to reject this upload",
+            ""
+          )
+        )
+      else None
+
+    maybeForcedTestFileError.orElse(maybeInvalidContentLength) match {
+      case Some(awsError) =>
+        form.redirectAfterError match {
+          case Some(url) => Redirect(url, queryParamsFor(form.key, awsError), 303)
+          case None      => BadRequest(invalidRequestBody(awsError.code, awsError.message))
+        }
+      case None => block
     }
   }
 
@@ -138,29 +154,56 @@ class UploadController @Inject()(
     val storedFile =
       storageService.get(fileId).getOrElse(throw new IllegalStateException("The file should have been stored"))
 
-    val foundVirus: ScanningResult = virusScanner.checkIfClean(storedFile)
-
-    val fileData = foundVirus match {
-      case Clean =>
-        val fileUploadDetails = UploadDetails(
-          clock.instant(),
-          generateChecksum(storedFile.body),
-          mapFilenameToMimeType(filename = file.filename),
-          file.filename,
-          file.fileSize
-        )
-        UploadedFile(
-          callbackUrl   = new URL(form.callbackUrl),
-          reference     = reference,
-          downloadUrl   = new URL(buildDownloadUrl(fileId = fileId)),
-          uploadDetails = fileUploadDetails
-        )
-      case VirusFound(details) =>
+    val fileData = maybeForcedTestFileError(file) match {
+      case Some(ForcedTestFileErrorQuarantine(error)) =>
         QuarantinedFile(
           callbackUrl = new URL(form.callbackUrl),
-          reference   = reference,
-          error       = details
+          reference = reference,
+          error = error
         )
+
+      case Some(ForcedTestFileErrorRejected(error)) =>
+        RejectedFile(
+          callbackUrl = new URL(form.callbackUrl),
+          reference = reference,
+          error = error
+        )
+
+      case Some(ForcedTestFileErrorUnknown(error)) =>
+        UnknownReasonFile(
+          callbackUrl = new URL(form.callbackUrl),
+          reference = reference,
+          error = error
+        )
+
+      case None =>
+        val foundVirus: ScanningResult =
+          if (file.filename.startsWith("infected."))
+            VirusFound(file.filename.drop(9).takeWhile(_ != '.'))
+          else virusScanner.checkIfClean(storedFile)
+
+        foundVirus match {
+          case Clean =>
+            val fileUploadDetails = UploadDetails(
+              clock.instant(),
+              generateChecksum(storedFile.body),
+              mapFilenameToMimeType(filename = file.filename),
+              file.filename,
+              file.fileSize
+            )
+            UploadedFile(
+              callbackUrl = new URL(form.callbackUrl),
+              reference = reference,
+              downloadUrl = new URL(buildDownloadUrl(fileId = fileId)),
+              uploadDetails = fileUploadDetails
+            )
+          case VirusFound(details) =>
+            QuarantinedFile(
+              callbackUrl = new URL(form.callbackUrl),
+              reference = reference,
+              error = details
+            )
+        }
     }
 
     notificationQueueProcessor.enqueueNotification(fileData)
@@ -189,5 +232,33 @@ class UploadController @Inject()(
   def generateChecksum(fileBytes: Array[Byte]): String = {
     val checksum = MessageDigest.getInstance("SHA-256").digest(fileBytes)
     checksum.map("%02x" format _).mkString
+  }
+
+  private def queryParamsFor(key: String, awsError: AWSError): Map[String, Seq[String]] =
+    Map(
+      "key"            -> Seq(key),
+      "errorCode"      -> Seq(awsError.code),
+      "errorMessage"   -> Seq(awsError.message),
+      "errorResource"  -> Seq("NoFileReference"),
+      "errorRequestId" -> Seq("SomeRequestId")
+    )
+
+  private def maybeForcedTestFileError(
+    file: MultipartFormData.FilePart[Files.TemporaryFile]
+  ): Option[ForcedTestFileError] = {
+    val name = file.filename
+    name.takeWhile(_ != '.') match {
+      case "infected" =>
+        Some(ForcedTestFileErrorQuarantine(name.drop(9).takeWhile(_ != '.')))
+
+      case "invalid" =>
+        Some(ForcedTestFileErrorRejected(name.drop(8).takeWhile(_ != '.')))
+
+      case "unknown" =>
+        Some(ForcedTestFileErrorUnknown(name.drop(8).takeWhile(_ != '.')))
+
+      case _ =>
+        None
+    }
   }
 }

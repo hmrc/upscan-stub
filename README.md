@@ -41,7 +41,14 @@ Additionally, a specific file can be passed in at Step 2 which will cause the ap
 ### Callback response from ```upscan-stub```
 Additionally, the service will make a callback in the format documented in [upscan-notify](https://github.com/hmrc/upscan-notify).
 
-### Testing virus scanning with ```upscan-stub```
+### Testing error scenarios using dedicated filename schema
+It is possible to easily force different upscan errors by simply renaming the uploaded file according to the following schema:
+- `rejected.S3_ERROR_CODE.EXT`, e.g. *rejected.UnexpectedContent.png*, see <https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList>
+- `infected.VIRUS_NAME.EXT`, e.g. *infected.MyDoom.jpeg*
+- `invalid.RESON.EXT`, e.g. *invalid.ZipInDisguise.txt*
+- `unknown.REASON.EXT`, e.g. *unknown.SpookyCookie.pdf*
+
+### Testing real virus scanning with ```upscan-stub```
 It is possible to test the upload of a virus-infected file using a test file included in the ```upscan-stub``` project. Uploading the following file will trigger a quarantined file callback:
 ```test/resources/eicar-standard-av-test-file.txt```
 
