@@ -48,12 +48,11 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
 
   "Upscan Initiate V1 with only mandatory form fields" should {
     val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, successRedirect, errorRedirect)
         if uploadUrl.endsWith("/upload") &&
           callbackUrl == CallbackUrl &&
           minimumFileSize.isEmpty &&
           maximumFileSize.isEmpty &&
-          expectedContentType.isEmpty &&
           successRedirect.isEmpty &&
           errorRedirect.isEmpty => ()
     }
@@ -70,12 +69,11 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
     )
 
     val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, successRedirect, errorRedirect)
         if uploadUrl.endsWith("/upload") &&
           callbackUrl == CallbackUrl &&
           minimumFileSize.contains(0) &&
           maximumFileSize.contains(1024) &&
-          expectedContentType.contains(XML) &&
           successRedirect.contains(SuccessRedirectUrl) &&
           errorRedirect.isEmpty => ()
     }
@@ -85,12 +83,11 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
 
   "Upscan Initiate V2 with only mandatory form fields" should {
     val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, successRedirect, errorRedirect)
         if uploadUrl.endsWith("/upload-proxy") &&
           callbackUrl == CallbackUrl &&
           minimumFileSize.isEmpty &&
           maximumFileSize.isEmpty &&
-          expectedContentType.isEmpty &&
           successRedirect.isEmpty &&
           errorRedirect.isEmpty => ()
     }
@@ -107,12 +104,11 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
       "successRedirect" -> SuccessRedirectUrl
     )
     val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, expectedContentType, successRedirect, errorRedirect)
+      case UploadSettings(uploadUrl, callbackUrl, minimumFileSize, maximumFileSize, successRedirect, errorRedirect)
         if uploadUrl.endsWith("/upload-proxy") &&
           callbackUrl == CallbackUrl &&
           minimumFileSize.contains(0) &&
           maximumFileSize.contains(1024) &&
-          expectedContentType.contains(XML) &&
           successRedirect.contains(SuccessRedirectUrl) &&
           errorRedirect.contains(ErrorRedirectUrl) => ()
     }

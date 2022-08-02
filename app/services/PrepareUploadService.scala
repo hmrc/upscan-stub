@@ -58,8 +58,7 @@ class PrepareUploadService @Inject()() {
           "x-amz-meta-original-filename"        -> s"$${filename}",
           "x-amz-meta-session-id"               -> randomUUID().toString,
           "x-amz-meta-request-id"               -> randomUUID().toString
-        ) ++ settings.expectedContentType.map { "Content-Type" -> _ }
-          ++ settings.successRedirect.map("success_action_redirect" -> successRedirectWithReference(_, reference))
+        ) ++ settings.successRedirect.map("success_action_redirect" -> successRedirectWithReference(_, reference))
           ++ settings.errorRedirect.map("error_action_redirect"     -> _)
           ++ consumingService.map { "x-amz-meta-consuming-service" -> _ }
       )

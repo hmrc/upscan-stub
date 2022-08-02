@@ -21,7 +21,6 @@ import org.apache.http.client.utils.URIBuilder
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.http.HeaderNames.CONTENT_TYPE
 import play.api.libs.json.{JsValue, Json}
 import utils.Implicits._
 
@@ -35,7 +34,6 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
       callbackUrl         = "callbackUrl",
       minimumFileSize     = None,
       maximumFileSize     = None,
-      expectedContentType = None,
       successRedirect     = None,
       errorRedirect       = None
     )
@@ -110,13 +108,6 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
       successActionQueryParams.map(_.getName) should contain theSameElementsAs Seq("upload", "key")
       successActionQueryParams.exists(qp => qp.getName == "upload" && qp.getValue == "1234") shouldBe true
       successActionRedirectUrl.clearParameters().build().toASCIIString shouldBe "https://www.example.com/success"
-    }
-
-    "include the expected content type when specified" in {
-      val result = testInstance.prepareUpload(uploadSettings.copy(expectedContentType = Some("application/pdf")),
-        userAgent)
-
-      result.uploadRequest.fields.get(CONTENT_TYPE) should contain ("application/pdf")
     }
   }
 
