@@ -37,4 +37,4 @@ bin
 .metals
 .vscode
 metals.sbt
-
+.bsp/
