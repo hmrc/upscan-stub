@@ -17,13 +17,13 @@
 package controllers
 
 import java.net.URL
-
 import filters.UserAgentFilter
+
 import javax.inject.Inject
 import model.initiate._
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json, _}
-import play.api.mvc.{Action, ControllerComponents, Result}
+import play.api.mvc.{Action, Call, ControllerComponents, Result}
 import services.PrepareUploadService
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -36,28 +36,34 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
 
   private val logger = Logger(this.getClass)
 
-  private implicit val prepareUploadRequestV1Reads: Reads[PrepareUploadRequestV1] =
-    PrepareUploadRequestV1.reads(PrepareUploadService.maxFileSize)
+  private val prepareUploadRequestReadsV1: Reads[PrepareUploadRequest] =
+    PrepareUploadRequest.readsV1(PrepareUploadService.maxFileSize)
 
-  private implicit val prepareUploadRequestV2Reads: Reads[PrepareUploadRequestV2] =
-    PrepareUploadRequestV2.reads(PrepareUploadService.maxFileSize)
+  def prepareUploadV1(): Action[JsValue] =
+    prepareUpload(routes.UploadController.upload)(prepareUploadRequestReadsV1)
 
-  def prepareUploadV1(): Action[JsValue] = prepareUpload[PrepareUploadRequestV1]()
+  private val prepareUploadRequestReadsV2: Reads[PrepareUploadRequest] =
+    PrepareUploadRequest.readsV2(PrepareUploadService.maxFileSize)
 
-  def prepareUploadV2(): Action[JsValue] = prepareUpload[PrepareUploadRequestV2]()
+  def prepareUploadV2(): Action[JsValue] =
+    prepareUpload(routes.UploadProxyController.upload)(prepareUploadRequestReadsV2)
 
-  private def prepareUpload[T <: PrepareUpload]()(implicit reads: Reads[T], manifest: Manifest[T]): Action[JsValue] =
+  private def prepareUpload(uploadCall: Call)(implicit reads: Reads[PrepareUploadRequest]): Action[JsValue] =
     withUserAgentHeader(logger, cc.actionBuilder) {
       Action.async(parse.json) { implicit request =>
-        withJsonBody[T] { prepareUpload: T =>
-          withAllowedCallbackProtocol(prepareUpload.callbackUrl) {
-            val consumingService = request.headers.get(USER_AGENT)
-            logger.debug(s"Received initiate request: [$prepareUpload] from [$consumingService].")
-            val url = prepareUpload match {
-              case _: PrepareUploadRequestV1 => routes.UploadController.upload.absoluteURL
-              case _: PrepareUploadRequestV2 => routes.UploadProxyController.upload.absoluteURL
-            }
-            val result = prepareUploadService.prepareUpload(prepareUpload.toUploadSettings(url), consumingService)
+        withJsonBody[PrepareUploadRequest] { prepareUploadRequest =>
+          withAllowedCallbackProtocol(prepareUploadRequest.callbackUrl) {
+            val userAgent = request.headers.get(USER_AGENT).get
+            logger.debug(s"Received initiate request: [$prepareUploadRequest] from [$userAgent].")
+
+            val settings =
+              UploadSettings(
+                uploadUrl            = uploadCall.absoluteURL(),
+                userAgent            = userAgent,
+                prepareUploadRequest = prepareUploadRequest
+              )
+
+            val result = prepareUploadService.prepareUpload(settings)
             logger.debug(s"Prepared initiate upload response with Key=[${result.reference.value}]")
             Future.successful(Ok(Json.toJson(result)(PrepareUploadResponse.format)))
           }

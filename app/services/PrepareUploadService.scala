@@ -35,7 +35,7 @@ class PrepareUploadService @Inject()() {
     def asBase64String(): String = Json.stringify(json).base64encode()
   }
 
-  def prepareUpload(settings: UploadSettings, consumingService: Option[String]): PrepareUploadResponse = {
+  def prepareUpload(settings: UploadSettings): PrepareUploadResponse = {
     val reference = generateReference()
     val policy    = toPolicy(settings)
 
@@ -54,13 +54,13 @@ class PrepareUploadService @Inject()() {
           "x-amz-signature"                     -> "xxxx",
           "x-amz-meta-upscan-initiate-received" -> now.toString,
           "x-amz-meta-upscan-initiate-response" -> now.toString,
-          "x-amz-meta-callback-url"             -> settings.callbackUrl,
+          "x-amz-meta-callback-url"             -> settings.prepareUploadRequest.callbackUrl,
           "x-amz-meta-original-filename"        -> s"$${filename}",
           "x-amz-meta-session-id"               -> randomUUID().toString,
-          "x-amz-meta-request-id"               -> randomUUID().toString
-        ) ++ settings.successRedirect.map("success_action_redirect" -> successRedirectWithReference(_, reference))
-          ++ settings.errorRedirect.map("error_action_redirect"     -> _)
-          ++ consumingService.map { "x-amz-meta-consuming-service" -> _ }
+          "x-amz-meta-request-id"               -> randomUUID().toString,
+          "x-amz-meta-consuming-service"        -> settings.consumingService
+        ) ++ settings.prepareUploadRequest.successRedirect.map("success_action_redirect" -> successRedirectWithReference(_, reference))
+          ++ settings.prepareUploadRequest.errorRedirect.map("error_action_redirect"     -> _)
       )
     )
   }
@@ -83,8 +83,8 @@ class PrepareUploadService @Inject()() {
         Seq(
           Json.arr(
             "content-length-range",
-            settings.minimumFileSize.foldLeft(PrepareUploadService.minFileSize)(math.max),
-            settings.maximumFileSize.foldLeft(PrepareUploadService.maxFileSize)(math.min)
+            settings.prepareUploadRequest.minimumFileSize.foldLeft(PrepareUploadService.minFileSize)(math.max),
+            settings.prepareUploadRequest.maximumFileSize.foldLeft(PrepareUploadService.maxFileSize)(math.min)
           )
         )
       )
@@ -94,6 +94,6 @@ class PrepareUploadService @Inject()() {
 }
 
 object PrepareUploadService {
-  val minFileSize = 0
-  val maxFileSize = 104857600
+  val minFileSize = 0L
+  val maxFileSize = 104857600L
 }
