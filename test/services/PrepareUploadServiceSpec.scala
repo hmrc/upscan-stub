@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,50 @@
 
 package services
 
-import model.initiate.{PrepareUploadResponse, UploadSettings}
+import model.initiate.{PrepareUploadRequest, PrepareUploadResponse, UploadSettings}
 import org.apache.http.client.utils.URIBuilder
 import org.scalatest.OptionValues
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.http.HeaderNames.CONTENT_TYPE
 import play.api.libs.json.{JsValue, Json}
 import utils.Implicits._
 
 class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValues {
+
   "PrepareUploadService.prepareUpload" should {
     val testInstance = new PrepareUploadService()
-    val userAgent    = Some("PrepareUploadServiceSpec")
+    val userAgent    = "PrepareUploadServiceSpec"
 
-    val uploadSettings = UploadSettings(
-      uploadUrl           = "uploadUrl",
-      callbackUrl         = "callbackUrl",
-      minimumFileSize     = None,
-      maximumFileSize     = None,
-      expectedContentType = None,
-      successRedirect     = None,
-      errorRedirect       = None
-    )
+    val prepareUploadRequest =
+      PrepareUploadRequest(
+        callbackUrl      = "callbackUrl",
+        minimumFileSize  = None,
+        maximumFileSize  = None,
+        successRedirect  = None,
+        errorRedirect    = None,
+        consumingService = None
+      )
+
+    val uploadSettings =
+      UploadSettings(
+        uploadUrl            = "uploadUrl",
+        userAgent            = userAgent,
+        prepareUploadRequest = prepareUploadRequest
+      )
 
     "include supplied file size constraints in the policy" in {
-      val result = testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = Some(10), maximumFileSize = Some(100)),
-        userAgent)
+      val settings =
+        uploadSettings
+          .copy(
+            prepareUploadRequest =
+              prepareUploadRequest
+                .copy(
+                  minimumFileSize = Some(10),
+                  maximumFileSize = Some(100)
+                )
+          )
+
+      val result = testInstance.prepareUpload(settings)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(10)
@@ -51,8 +68,18 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
     }
 
     "include default file size constraints in the policy" in {
-      val result = testInstance.prepareUpload(uploadSettings.copy(minimumFileSize = None, maximumFileSize = None),
-        userAgent)
+      val settings =
+        uploadSettings
+          .copy(
+            prepareUploadRequest =
+              prepareUploadRequest
+                .copy(
+                  minimumFileSize = None,
+                  maximumFileSize = None
+                )
+          )
+
+      val result = testInstance.prepareUpload(settings)
 
       withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
         min shouldBe Some(0)
@@ -61,7 +88,7 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
     }
 
     "include all required fields" in {
-      val result = testInstance.prepareUpload(uploadSettings, userAgent)
+      val result = testInstance.prepareUpload(uploadSettings)
 
       val formFields = result.uploadRequest.fields
 
@@ -86,20 +113,36 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
     }
 
     "include upload redirect URLs when specified" in {
-      val result = testInstance.prepareUpload(uploadSettings.copy(
-        errorRedirect = Some("https://www.example.com/error"),
-        successRedirect = Some("https://www.example.com/success")
-      ), userAgent)
+      val settings =
+        uploadSettings
+          .copy(
+            prepareUploadRequest =
+              prepareUploadRequest
+                .copy(
+                  successRedirect = Some("https://www.example.com/success"),
+                  errorRedirect   = Some("https://www.example.com/error")
+                )
+          )
+
+      val result = testInstance.prepareUpload(settings)
 
       result.uploadRequest.fields.get("error_action_redirect") should contain ("https://www.example.com/error")
       result.uploadRequest.fields.get("success_action_redirect").value should startWith("https://www.example.com/success?key=")
     }
 
     "retain any existing query parameters on upload redirect URLs when specified" in {
-      val result = testInstance.prepareUpload(uploadSettings.copy(
-        errorRedirect = Some("https://www.example.com/error?upload=1234"),
-        successRedirect = Some("https://www.example.com/success?upload=1234")
-      ), userAgent)
+      val settings =
+        uploadSettings
+          .copy(
+            prepareUploadRequest =
+              prepareUploadRequest
+                .copy(
+                  successRedirect = Some("https://www.example.com/success?upload=1234"),
+                  errorRedirect   = Some("https://www.example.com/error?upload=1234")
+                )
+          )
+
+      val result = testInstance.prepareUpload(settings)
 
       import scala.collection.JavaConverters._
       val successActionRedirectUrl = result.uploadRequest.fields.get("success_action_redirect").map(new URIBuilder(_)).value
@@ -112,11 +155,38 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
       successActionRedirectUrl.clearParameters().build().toASCIIString shouldBe "https://www.example.com/success"
     }
 
-    "include the expected content type when specified" in {
-      val result = testInstance.prepareUpload(uploadSettings.copy(expectedContentType = Some("application/pdf")),
-        userAgent)
+    "include `consumingService` from `USER-AGENT` header if not supplied explicitly" in {
+      val userAgent =
+        "some-user-agent"
 
-      result.uploadRequest.fields.get(CONTENT_TYPE) should contain ("application/pdf")
+      val settings =
+        uploadSettings
+          .copy(userAgent = userAgent)
+
+      val result = testInstance.prepareUpload(settings)
+
+      result.uploadRequest.fields.get("x-amz-meta-consuming-service") should contain (userAgent)
+    }
+
+    "include `consumingService` when supplied explicitly, overriding the `USER-AGENT` fallback" in {
+      val userAgent =
+        "some-user-agent"
+
+      val consumingService =
+        "some-consuming-service"
+
+      val settings =
+        uploadSettings
+          .copy(
+            userAgent            = userAgent,
+            prepareUploadRequest =
+              prepareUploadRequest
+                .copy(consumingService = Some(consumingService))
+          )
+
+      val result = testInstance.prepareUpload(settings)
+
+      result.uploadRequest.fields.get("x-amz-meta-consuming-service") should contain (consumingService)
     }
   }
 

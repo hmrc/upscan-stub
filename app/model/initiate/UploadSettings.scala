@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 HM Revenue & Customs
+ * Copyright 2022 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@
 
 package model.initiate
 
-case class UploadSettings(
+final case class UploadSettings(
   uploadUrl: String,
-  callbackUrl: String,
-  minimumFileSize: Option[Int],
-  maximumFileSize: Option[Int],
-  expectedContentType: Option[String],
-  successRedirect: Option[String],
-  errorRedirect: Option[String])
+  userAgent: String,
+  prepareUploadRequest: PrepareUploadRequest
+) {
+
+  lazy val consumingService: String =
+    prepareUploadRequest.consumingService.getOrElse(userAgent)
+}
