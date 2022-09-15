@@ -16,16 +16,19 @@
 
 package services
 
+import akka.actor.ActorSystem
+
 import java.net.URL
 import javax.inject.Inject
-
 import model._
-import play.api.Logger
+import play.api.{Configuration, Logger}
 import play.api.libs.json._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.http.HttpClient
 
-import scala.concurrent.{ExecutionContext, Future}
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
 trait NotificationSender {
   def sendNotification(uploadedFile: ProcessedFile): Future[Unit]
@@ -76,20 +79,31 @@ object ErrorDetails {
   implicit val formatsErrorDetails: Format[ErrorDetails] = Json.format[ErrorDetails]
 }
 
-class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: ExecutionContext)
-    extends NotificationSender {
+class HttpNotificationSender @Inject()(
+  httpClient: HttpClient,
+  actorSystem: ActorSystem,
+  config: Configuration,
+)(implicit ec: ExecutionContext) extends NotificationSender {
 
   import uk.gov.hmrc.http.HttpReads.Implicits._
 
   private val logger = Logger(this.getClass)
 
+  private val artificialDelay =
+    FiniteDuration(
+      config.getMillis("notifications.artificial-delay"),
+      TimeUnit.MILLISECONDS
+    )
+
  override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
-    uploadedFile match {
-      case f: UploadedFile      => notifySuccessfulCallback(f)
-      case f: QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
-      case f: RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
-      case f: UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
-    }
+   withArtificialDelay(artificialDelay) {
+     uploadedFile match {
+       case f: UploadedFile      => notifySuccessfulCallback(f)
+       case f: QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
+       case f: RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
+       case f: UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
+     }
+   }
 
   private def notifySuccessfulCallback(uploadedFile: UploadedFile): Future[Unit] = {
 
@@ -130,4 +144,9 @@ class HttpNotificationSender @Inject()(httpClient: HttpClient)(implicit ec: Exec
       }
   }
 
+  private def withArtificialDelay[A](delay: FiniteDuration)(action: => Future[A]): Future[A] = {
+    val p = Promise[Unit]()
+    actorSystem.scheduler.scheduleOnce(delay)(p.success(()))
+    p.future.flatMap(_ => action)
+  }
 }
