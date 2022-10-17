@@ -247,7 +247,6 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       fields.get("x-amz-meta-consuming-service") should contain ("InitiateControllerISpec")
       fields.get("x-amz-meta-callback-url") should contain ("http://localhost:9570/callback")
       fields.get("success_action_redirect").value should startWith("https://www.example.com/nextpage?key=")
-      fields.get("Content-Type") should contain (XML)
       responseFieldsMatcher.foreach(matchExpectations => fields should matchExpectations)
     }
   }
