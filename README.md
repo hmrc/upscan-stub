@@ -43,7 +43,7 @@ Additionally, the service will make a callback in the format documented in [upsc
 
 ### Testing error scenarios using dedicated filename schema
 It is possible to easily force different upscan errors by simply renaming the uploaded file according to the following schema:
-- `rejected.S3_ERROR_CODE.EXT`, e.g. *rejected.UnexpectedContent.png*, see <https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList>
+- `reject.S3_ERROR_CODE.EXT`, e.g. *reject.UnexpectedContent.png*, see <https://docs.aws.amazon.com/AmazonS3/latest/API/ErrorResponses.html#ErrorCodeList>
 - `infected.VIRUS_NAME.EXT`, e.g. *infected.MyDoom.jpeg*
 - `invalid.REASON.EXT`, e.g. *invalid.ZipInDisguise.txt*
 - `unknown.REASON.EXT`, e.g. *unknown.SpookyCookie.pdf*
