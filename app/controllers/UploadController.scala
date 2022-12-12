@@ -218,6 +218,7 @@ class UploadController @Inject()(
       case "csv"  => "text/csv"
       case "xls"  => "application/vnd.ms-excel"
       case "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      case "ods"  => "application/vnd.oasis.opendocument.spreadsheet
       case _      => s"application/binary"
     }
 
