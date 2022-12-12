@@ -215,6 +215,9 @@ class UploadController @Inject()(
       case "jpeg" => "image/jpeg"
       case "pdf"  => "application/pdf"
       case "png"  => "image/png"
+      case "csv"  => "text/csv"
+      case "xls"  => "application/vnd.ms-excel"
+      case "xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       case _      => s"application/binary"
     }
 
