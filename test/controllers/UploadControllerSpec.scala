@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -198,7 +198,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -301,7 +301,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -342,7 +342,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode),
+          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),

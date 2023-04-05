@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,14 +28,14 @@ import scala.concurrent.duration._
 class NotificationQueueProcessor(
   notificationService: NotificationSender,
   maximumRetryCount: Int     = 10,
-  retryDelay: FiniteDuration = 30 seconds)(implicit actorSystem: ActorSystem) {
+  retryDelay: FiniteDuration = 30.seconds
+)(implicit actorSystem: ActorSystem) {
 
   private val notificationProcessingActor =
     actorSystem.actorOf(QueueProcessingActor(notificationService, maximumRetryCount, retryDelay))
 
   def enqueueNotification(uploadedFile: ProcessedFile): Unit =
     notificationProcessingActor ! EnqueueNotification(Notification(uploadedFile))
-
 }
 
 case class EnqueueNotification(notification: Notification)
@@ -51,10 +51,13 @@ object QueueProcessingActor {
     Props(new QueueProcessingActor(notificationSender, maximumRetryCount, retryDelay))
 }
 
-class QueueProcessingActor(notificationSender: NotificationSender, maximumRetryCount: Int, retryDelay: FiniteDuration)
-    extends Actor with ActorLogging {
+class QueueProcessingActor(
+  notificationSender: NotificationSender,
+  maximumRetryCount : Int,
+  retryDelay        : FiniteDuration
+) extends Actor with ActorLogging {
 
-  implicit val timeout: Timeout = Timeout(5 seconds)
+  implicit val timeout: Timeout = Timeout(5.seconds)
 
   implicit val ec: ExecutionContext = context.system.dispatcher
 

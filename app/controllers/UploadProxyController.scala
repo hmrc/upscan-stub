@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,8 +41,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 import scala.xml.Elem
 
-class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponents)(implicit ec: ExecutionContext)
-    extends BackendController(cc) {
+class UploadProxyController @Inject()(
+  wsClient: WSClient,
+  cc      : ControllerComponents
+)(implicit
+  ec: ExecutionContext
+) extends BackendController(cc) {
 
   import UploadProxyController._
 
@@ -114,11 +118,16 @@ class UploadProxyController @Inject()(wsClient: WSClient, cc: ControllerComponen
     } yield
       response match {
         case r if r.status >= 200 && r.status < 400 => toSuccessResult(r)
-        case r                                      => proxyErrorResponse(errorAction, r.status, r.body, r.headers)
+        case r                                      => proxyErrorResponse(errorAction, r.status, r.body, forScala2_13(r.headers))
       }
 
   private def toSuccessResult(response: WSResponse): Result =
-    Results.Status(response.status)(response.body).withHeaders(asTuples(response.headers): _*)
+    Results.Status(response.status)(response.body).withHeaders(asTuples(forScala2_13(response.headers)): _*)
+
+  // play returns scala.collection.Seq, but default for Scala 2.13 is scala.collection.immutable.Seq
+  private def forScala2_13(m: Map[String, scala.collection.Seq[String]]): Map[String, Seq[String]] =
+    // `m.mapValues(_.toSeq).toMap` by itself strips the ordering away
+    scala.collection.immutable.TreeMap[String, Seq[String]]()(scala.math.Ordering.comparatorToOrdering(String.CASE_INSENSITIVE_ORDER)) ++ m.view.mapValues(_.toSeq)
 }
 
 private object UploadProxyController {
@@ -149,7 +158,7 @@ private object UploadProxyController {
      */
     def adoptFile(filePart: FilePart[TemporaryFile]): Try[FilePart[Path]] = {
       val inPath  = filePart.ref.path
-      val outPath = inPath.resolveSibling(inPath.getFileName + AdoptedFileSuffix)
+      val outPath = inPath.resolveSibling(inPath.getFileName.toString + AdoptedFileSuffix)
       Try(filePart.copy(ref = filePart.ref.atomicMoveWithFallback(outPath)))
     }
 

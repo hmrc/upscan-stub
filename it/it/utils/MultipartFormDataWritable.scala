@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package it.utils
 
 import java.nio.file.{Files, Paths}
 
+import akka.util.ByteString
 import play.api.http.{HeaderNames, Writeable}
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData.FilePart
@@ -26,7 +27,7 @@ import play.api.mvc.{Codec, MultipartFormData}
 object MultipartFormDataWritable {
   val boundary = "--------ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
 
-  private def formatDataParts(data: Map[String, Seq[String]]) = {
+  private def formatDataParts(data: Map[String, Seq[String]]): ByteString = {
     val dataParts = data
       .flatMap {
         case (key, values) =>
@@ -39,13 +40,11 @@ object MultipartFormDataWritable {
     Codec.utf_8.encode(dataParts)
   }
 
-  private def filePartHeader(file: FilePart[TemporaryFile]) = {
+  private def filePartHeader(file: FilePart[TemporaryFile]): ByteString = {
     val name     = s""""${file.key}""""
     val filename = s""""${file.filename}""""
     val contentType = file.contentType
-      .map { ct =>
-        s"${HeaderNames.CONTENT_TYPE}: $ct\r\n"
-      }
+      .map(ct => s"${HeaderNames.CONTENT_TYPE}: $ct\r\n")
       .getOrElse("")
     Codec.utf_8.encode(
       s"--$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=$name; filename=$filename\r\n$contentType\r\n")
@@ -54,10 +53,10 @@ object MultipartFormDataWritable {
   val writeable: Writeable[MultipartFormData[TemporaryFile]] = Writeable[MultipartFormData[TemporaryFile]](
     transform = { form: MultipartFormData[TemporaryFile] =>
       formatDataParts(form.dataParts) ++
-        form.files.flatMap { file =>
+        ByteString(form.files.flatMap { file =>
           val fileBytes = Files.readAllBytes(Paths.get(file.ref.path.toFile.getAbsolutePath))
           filePartHeader(file) ++ fileBytes ++ Codec.utf_8.encode("\r\n")
-        } ++
+        }) ++
         Codec.utf_8.encode(s"--$boundary--")
     },
     contentType = Some(s"multipart/form-data; boundary=$boundary")
