@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ class PrepareUploadService @Inject()() {
         fields = Map(
           "acl"                                 -> "private",
           "key"                                 -> reference.value,
-          "policy"                              -> policy.asBase64String,
+          "policy"                              -> policy.asBase64String(),
           "x-amz-algorithm"                     -> "AWS4-HMAC-SHA256",
           "x-amz-credential"                    -> "ASIAxxxxxxxxx/20180202/eu-west-2/s3/aws4_request",
           "x-amz-date"                          -> dateTimeFormatter.format(now),

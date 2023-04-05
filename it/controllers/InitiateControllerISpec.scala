@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 package controllers
 
 import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.testkit.NoMaterializer
 import model.initiate.PrepareUploadResponse
 import org.scalatest.{GivenWhenThen, OptionValues}
 import org.scalatest.matchers.Matcher
@@ -37,7 +35,6 @@ import scala.concurrent.duration._
 class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen with OptionValues {
 
   private implicit val actorSystem: ActorSystem        = ActorSystem()
-  private implicit val materializer: Materializer      = NoMaterializer
   private implicit val timeout: akka.util.Timeout      = 10.seconds
 
   private val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
@@ -125,7 +122,7 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       And("the response body contains expected error message")
       contentAsString(initiateResponse) should include(
-        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),WrappedArray()))))"
+        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),ArraySeq()))))"
       )
     }
 

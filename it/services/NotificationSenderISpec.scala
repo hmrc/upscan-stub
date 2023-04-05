@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +20,14 @@ import java.nio.file.Files
 import java.time.{Clock, Instant, ZoneId}
 
 import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.testkit.NoMaterializer
 import com.github.tomakehurst.wiremock.client.WireMock._
-import it.utils
-import it.utils.{MultipartFormDataWritable, WithWireMock}
+import it.utils.MultipartFormDataWritable
 import model.initiate.PrepareUploadResponse
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, GivenWhenThen}
+import org.scalatest.{BeforeAndAfterAll, GivenWhenThen}
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -42,25 +39,22 @@ import play.api.test.Helpers.{contentAsJson, contentAsString, defaultAwaitTimeou
 import play.api.test.Helpers
 import play.api.{Application, Play}
 import play.mvc.Http.Status.OK
+import uk.gov.hmrc.http.test.WireMockSupport
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 class NotificationSenderISpec
-    extends AnyWordSpec
-    with Matchers
-    with WithWireMock
-    with BeforeAndAfterEach
-    with BeforeAndAfterAll
-    with GivenWhenThen
-    with Eventually {
+  extends AnyWordSpec
+     with Matchers
+     with WireMockSupport
+     with BeforeAndAfterAll
+     with GivenWhenThen
+     with Eventually {
 
   implicit override val patienceConfig =
     PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(300, Millis)))
 
-  override val wiremockPort: Int = 9570
-
   implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: Materializer      = NoMaterializer
 
   val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
@@ -68,12 +62,12 @@ class NotificationSenderISpec
     .overrides(bind[Clock].to[NotificationSenderClock])
     .build()
 
-  override def beforeAll() {
+  override def beforeAll(): Unit = {
     super.beforeAll()
     Play.start(fakeApplication)
   }
 
-  override def afterAll() {
+  override def afterAll(): Unit = {
     super.afterAll()
     Play.stop(fakeApplication)
   }
@@ -106,7 +100,7 @@ class NotificationSenderISpec
 
       val uploadUrl = response.uploadRequest.href.replace("http://", "")
       val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
-        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
+        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wireMockPort/upscan/callback"))
 
       val fileReference = response.uploadRequest.fields("key")
 
@@ -188,7 +182,7 @@ class NotificationSenderISpec
 
       val uploadUrl = response.uploadRequest.href.replace("http://", "")
       val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
-        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
+        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wireMockPort/upscan/callback"))
 
       val fileReference = response.uploadRequest.fields("key")
 
@@ -206,7 +200,7 @@ class NotificationSenderISpec
       )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = utils.MultipartFormDataWritable.writeable
+      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -256,7 +250,7 @@ class NotificationSenderISpec
 
       val uploadUrl = response.uploadRequest.href.replace("http://", "")
       val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
-        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
+        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wireMockPort/upscan/callback"))
 
       val fileReference = response.uploadRequest.fields("key")
 
@@ -274,7 +268,7 @@ class NotificationSenderISpec
       )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = utils.MultipartFormDataWritable.writeable
+      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -323,7 +317,7 @@ class NotificationSenderISpec
 
       val uploadUrl = response.uploadRequest.href.replace("http://", "")
       val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
-        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
+        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wireMockPort/upscan/callback"))
 
       val fileReference = response.uploadRequest.fields("key")
 
@@ -341,7 +335,7 @@ class NotificationSenderISpec
       )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = utils.MultipartFormDataWritable.writeable
+      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -390,7 +384,7 @@ class NotificationSenderISpec
 
       val uploadUrl = response.uploadRequest.href.replace("http://", "")
       val formFields = response.uploadRequest.fields.map(field => (field._1, Seq(field._2))) +
-        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wiremockPort/upscan/callback"))
+        ("x-amz-meta-callback-url" -> Seq(s"http://localhost:$wireMockPort/upscan/callback"))
 
       val fileReference = response.uploadRequest.fields("key")
 
@@ -408,7 +402,7 @@ class NotificationSenderISpec
       )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = utils.MultipartFormDataWritable.writeable
+      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -429,7 +423,7 @@ class NotificationSenderISpec
           postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
       }
     }
-  
+
 }
 
 class NotificationSenderClock extends Clock {

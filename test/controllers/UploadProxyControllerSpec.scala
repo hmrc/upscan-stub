@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,9 +30,9 @@ import play.mvc.Http.HeaderNames.{CONTENT_TYPE, LOCATION}
 import play.mvc.Http.MimeTypes.JSON
 import play.mvc.Http.Status.{BAD_REQUEST, SEE_OTHER}
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 class UploadProxyControllerSpec extends AnyWordSpec with Matchers with OptionValues {
 
@@ -100,5 +100,5 @@ private object UploadProxyControllerSpec {
     result.header.headers.get(LOCATION).map(new URIBuilder(_))
 
   def queryParametersOf(uri: URIBuilder): Seq[(String, String)] =
-    uri.getQueryParams.asScala.map(nv => nv.getName -> nv.getValue)
+    uri.getQueryParams.asScala.map(nv => nv.getName -> nv.getValue).toSeq
 }

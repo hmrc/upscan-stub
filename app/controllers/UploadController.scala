@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,7 +80,7 @@ class UploadController @Inject()(
     val validatedFile: Either[Seq[String], MultipartFormData.FilePart[TemporaryFile]] =
       request.body.file("file").map(Right(_)).getOrElse(Left(Seq("'file' field not found")))
 
-    val validatedInput: Either[Traversable[String], (UploadPostForm, MultipartFormData.FilePart[TemporaryFile])] =
+    val validatedInput: Either[Iterable[String], (UploadPostForm, MultipartFormData.FilePart[TemporaryFile])] =
       ApplicativeHelpers.product(validatedForm, validatedFile)
 
     validatedInput.fold(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -144,7 +144,7 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
 
       val result = testInstance.prepareUpload(settings)
 
-      import scala.collection.JavaConverters._
+      import scala.jdk.CollectionConverters._
       val successActionRedirectUrl = result.uploadRequest.fields.get("success_action_redirect").map(new URIBuilder(_)).value
       val successActionQueryParams = successActionRedirectUrl.getQueryParams.asScala
 
