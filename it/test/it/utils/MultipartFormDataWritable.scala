@@ -18,7 +18,7 @@ package it.utils
 
 import java.nio.file.{Files, Paths}
 
-import akka.util.ByteString
+import org.apache.pekko.util.ByteString
 import play.api.http.{HeaderNames, Writeable}
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData.FilePart

@@ -1,21 +1,22 @@
-import uk.gov.hmrc.DefaultBuildSettings.integrationTestSettings
-import uk.gov.hmrc.versioning.SbtGitVersioning.autoImport.majorVersion
+import uk.gov.hmrc.DefaultBuildSettings
+
+ThisBuild / majorVersion := 0
+ThisBuild / scalaVersion := "2.13.12"
 
 lazy val microservice = Project("upscan-stub", file("."))
   .enablePlugins(play.sbt.PlayScala, SbtDistributablesPlugin)
   .settings(
-    majorVersion := 0,
-    scalaVersion := "2.13.8",
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test
   )
   .settings(
     scalacOptions += "-Wconf:cat=unused-imports&src=html/.*:s",
     scalacOptions += "-Wconf:src=routes/.*:s",
   )
-  .configs(IntegrationTest)
-  .settings(integrationTestSettings(): _*)
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(PlayKeys.playDefaultPort := 9570)
-  .settings(
-    IntegrationTest / unmanagedResourceDirectories += (IntegrationTest / baseDirectory).value / "it" / "resources"
-  )
+
+lazy val it =
+  (project in file("it"))
+    .enablePlugins(PlayScala)
+    .dependsOn(microservice % "test->test")
+    .settings(DefaultBuildSettings.itSettings)

@@ -16,7 +16,7 @@
 
 package controllers
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import controllers.UploadProxyController.ErrorAction
 import controllers.UploadProxyController.ErrorResponseHandler.proxyErrorResponse
 import org.apache.http.client.utils.URIBuilder

@@ -19,7 +19,7 @@ package services
 import java.nio.file.Files
 import java.time.{Clock, Instant, ZoneId}
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.github.tomakehurst.wiremock.client.WireMock._
 import it.utils.MultipartFormDataWritable
 import model.initiate.PrepareUploadResponse

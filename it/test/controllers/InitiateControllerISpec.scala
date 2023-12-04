@@ -16,7 +16,7 @@
 
 package controllers
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import model.initiate.PrepareUploadResponse
 import org.scalatest.{GivenWhenThen, OptionValues}
 import org.scalatest.matchers.Matcher
@@ -34,8 +34,8 @@ import scala.concurrent.duration._
 
 class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen with OptionValues {
 
-  private implicit val actorSystem: ActorSystem        = ActorSystem()
-  private implicit val timeout: akka.util.Timeout      = 10.seconds
+  private implicit val actorSystem: ActorSystem                   = ActorSystem()
+  private implicit val timeout    : org.apache.pekko.util.Timeout = 10.seconds
 
   private val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
@@ -122,7 +122,7 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       And("the response body contains expected error message")
       contentAsString(initiateResponse) should include(
-        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),ArraySeq()))))"
+        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),List()))))"
       )
     }
 

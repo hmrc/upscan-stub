@@ -16,9 +16,9 @@
 
 package controllers
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.testkit.NoMaterializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.testkit.NoMaterializer
 import it.utils.MultipartFormDataWritable
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers

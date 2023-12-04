@@ -20,9 +20,9 @@ import java.net.URI
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Path}
 
-import akka.stream.IOResult
-import akka.stream.scaladsl.{FileIO, Source}
-import akka.util.ByteString
+import org.apache.pekko.stream.IOResult
+import org.apache.pekko.stream.scaladsl.{FileIO, Source}
+import org.apache.pekko.util.ByteString
 import controllers.UploadProxyController.ErrorResponseHandler.{errorResponse, proxyErrorResponse}
 import controllers.UploadProxyController.TemporaryFilePart.partitionTrys
 import javax.inject.Inject
@@ -159,11 +159,11 @@ private object UploadProxyController {
     def adoptFile(filePart: FilePart[TemporaryFile]): Try[FilePart[Path]] = {
       val inPath  = filePart.ref.path
       val outPath = inPath.resolveSibling(inPath.getFileName.toString + AdoptedFileSuffix)
-      Try(filePart.copy(ref = filePart.ref.atomicMoveWithFallback(outPath)))
+      Try(filePart.copy(ref = filePart.ref.atomicMoveWithFallback(outPath), refToBytes = _ => None))
     }
 
     def toUploadSource(filePart: FilePart[Path]): FilePart[Source[ByteString, Future[IOResult]]] =
-      filePart.copy(ref = FileIO.fromPath(filePart.ref))
+      filePart.copy(ref = FileIO.fromPath(filePart.ref), refToBytes = _ => None)
 
     def deleteFile(filePart: FilePart[Path]): Try[Boolean] =
       Try(Files.deleteIfExists(filePart.ref))

@@ -17,7 +17,7 @@
 package controllers
 
 import java.security.MessageDigest
-import akka.util.ByteString
+import org.apache.pekko.util.ByteString
 
 import javax.inject.Inject
 import model.FileId
