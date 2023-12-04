@@ -16,7 +16,7 @@
 
 package services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 
 import java.net.URL
 import javax.inject.Inject

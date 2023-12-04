@@ -16,9 +16,9 @@
 
 package services
 
-import akka.actor.{Actor, ActorLogging, ActorSystem, Props}
-import akka.pattern.pipe
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorLogging, ActorSystem, Props}
+import org.apache.pekko.pattern.pipe
+import org.apache.pekko.util.Timeout
 import model.ProcessedFile
 
 import scala.collection.immutable.Queue

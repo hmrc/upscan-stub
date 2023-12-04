@@ -17,7 +17,7 @@
 import java.time.Clock
 import javax.inject.{Inject, Provider, Singleton}
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import services.{HttpNotificationSender, NotificationQueueProcessor, NotificationSender}

@@ -16,8 +16,8 @@
 
 package controllers
 
-import akka.stream._
-import akka.stream.testkit.NoMaterializer
+import org.apache.pekko.stream._
+import org.apache.pekko.stream.testkit.NoMaterializer
 import model.Reference
 import model.initiate.{PrepareUploadRequest, PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import org.mockito.ArgumentMatchersSugar.argMatching
@@ -98,8 +98,8 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
         ) if uploadUrl.endsWith("/upload") &&
           userAgent == UserAgent &&
           callbackUrl == CallbackUrl &&
-          minimumFileSize.contains(0) &&
-          maximumFileSize.contains(1024) &&
+          minimumFileSize.contains(0L) &&
+          maximumFileSize.contains(1024L) &&
           successRedirect.contains(SuccessRedirectUrl) &&
           errorRedirect.isEmpty &&
           consumingService.contains(ConsumingService) &&
@@ -162,8 +162,8 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
         ) if uploadUrl.endsWith("/upload-proxy") &&
           userAgent == UserAgent &&
           callbackUrl == CallbackUrl &&
-          minimumFileSize.contains(0) &&
-          maximumFileSize.contains(1024) &&
+          minimumFileSize.contains(0L) &&
+          maximumFileSize.contains(1024L) &&
           successRedirect.contains(SuccessRedirectUrl) &&
           errorRedirect.contains(ErrorRedirectUrl) &&
           consumingService.contains(ConsumingService) &&

@@ -16,7 +16,7 @@
 
 package services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import model.{ProcessedFile, Reference, UploadDetails, UploadedFile}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.Eventually
@@ -33,7 +33,7 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
 
   implicit val actorSystem: ActorSystem = ActorSystem("test")
 
-  override implicit val patienceConfig = PatienceConfig(
+  override implicit val patienceConfig: PatienceConfig = PatienceConfig(
     timeout  = scaled(5.seconds),
     interval = scaled(100.millis)
   )
