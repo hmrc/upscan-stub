@@ -1,7 +1,7 @@
 # microservice specific routes
 
-POST       /initiate                  @controllers.InitiateController.prepareUploadV1
-POST       /v2/initiate               @controllers.InitiateController.prepareUploadV2
-POST       /upload-proxy              @controllers.UploadProxyController.upload
-POST       /upload                    @controllers.UploadController.upload
-GET        /download/:reference       @controllers.DownloadController.download(reference : String)
+POST       /initiate                  uk.gov.hmrc.upscanstub.controller.InitiateController.prepareUploadV1
+POST       /v2/initiate               uk.gov.hmrc.upscanstub.controller.InitiateController.prepareUploadV2
+POST       /upload-proxy              uk.gov.hmrc.upscanstub.controller.UploadProxyController.upload
+POST       /upload                    uk.gov.hmrc.upscanstub.controller.UploadController.upload
+GET        /download/:reference       uk.gov.hmrc.upscanstub.controller.DownloadController.download(reference : String)
