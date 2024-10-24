@@ -3,7 +3,7 @@ import sbt._
 object AppDependencies {
   import play.sbt.PlayImport.ws
 
-  val bootstrapVersion = "8.1.0"
+  val bootstrapVersion = "9.5.0"
 
   val compile = Seq(
     ws,
@@ -13,7 +13,6 @@ object AppDependencies {
   )
 
   val test = Seq(
-    "uk.gov.hmrc"            %% "bootstrap-test-play-30"   % bootstrapVersion  % Test,
-    "org.mockito"            %% "mockito-scala-scalatest"  % "1.17.29"         % Test
+    "uk.gov.hmrc"            %% "bootstrap-test-play-30"   % bootstrapVersion  % Test
   )
 }

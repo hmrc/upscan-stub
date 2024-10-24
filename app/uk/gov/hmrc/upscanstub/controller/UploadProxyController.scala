@@ -51,7 +51,7 @@ class UploadProxyController @Inject()(
 
   private val logger = Logger(this.getClass)
 
-  def upload(): Action[MultipartFormData[TemporaryFile]] = Action.async(parse.multipartFormData) { implicit request =>
+  lazy val upload: Action[MultipartFormData[TemporaryFile]] = Action.async(parse.multipartFormData) { implicit request =>
     val body = request.body
     logger.debug(
       s"Upload form contains dataParts=${summariseDataParts(body.dataParts)} and fileParts=${summariseFileParts(body.files)}")

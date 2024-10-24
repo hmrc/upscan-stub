@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.upscanstub.model.initiate
 
-import play.api.libs.json.Reads
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Reads.{max, min}

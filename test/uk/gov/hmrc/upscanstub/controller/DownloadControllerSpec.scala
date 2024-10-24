@@ -19,10 +19,11 @@ package uk.gov.hmrc.upscanstub.controller
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.testkit.NoMaterializer
-import org.mockito.{Mockito, MockitoSugar}
+import org.mockito.Mockito
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.Result
 import play.api.test.FakeRequest
 import play.api.test.Helpers._

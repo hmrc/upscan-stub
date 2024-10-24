@@ -93,15 +93,15 @@ class HttpNotificationSender @Inject()(
       TimeUnit.MILLISECONDS
     )
 
- override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
-   withArtificialDelay(artificialDelay) {
-     uploadedFile match {
-       case f: UploadedFile      => notifySuccessfulCallback(f)
-       case f: QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
-       case f: RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
-       case f: UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
-     }
-   }
+  override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
+    withArtificialDelay(artificialDelay) {
+      uploadedFile match {
+        case f: UploadedFile      => notifySuccessfulCallback(f)
+        case f: QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
+        case f: RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
+        case f: UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
+      }
+    }
 
   private def notifySuccessfulCallback(uploadedFile: UploadedFile): Future[Unit] = {
 
@@ -111,7 +111,7 @@ class HttpNotificationSender @Inject()(
       ReadyCallbackBody(uploadedFile.reference, uploadedFile.downloadUrl, uploadDetails = uploadedFile.uploadDetails)
 
     httpClient
-      .POST[ReadyCallbackBody, HttpResponse](uploadedFile.callbackUrl.toString, callback)
+      .POST[ReadyCallbackBody, HttpResponse](uploadedFile.callbackUrl, callback)
       .map { httpResponse =>
         logger.info(
           s"""File ready notification for Key=[${uploadedFile.reference.value}] sent to service with callbackUrl: [${uploadedFile.callbackUrl}].
@@ -133,7 +133,7 @@ class HttpNotificationSender @Inject()(
       FailedCallbackBody(reference, failureDetails = errorDetails)
 
     httpClient
-      .POST[FailedCallbackBody, HttpResponse](callbackUrl.toString, callback)
+      .POST[FailedCallbackBody, HttpResponse](callbackUrl, callback)
       .map { httpResponse =>
         logger.info(
           s"""File failed notification for Key=[${reference.value}] sent to service with callbackUrl: [${callbackUrl}].

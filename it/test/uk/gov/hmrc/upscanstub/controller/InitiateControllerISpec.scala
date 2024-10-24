@@ -122,7 +122,7 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       And("the response body contains expected error message")
       contentAsString(initiateResponse) should include(
-        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),List()))))"
+        "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),ArraySeq()))))"
       )
     }
 

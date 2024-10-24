@@ -57,10 +57,10 @@ class UploadController @Inject()(
       "x-amz-meta-callback-url" -> nonEmptyText,
       "success_action_redirect" -> optional(text),
       "error_action_redirect"   -> optional(text)
-    )(UploadPostForm.apply)(UploadPostForm.unapply)
+    )(UploadPostForm.apply)(upf => Some(Tuple.fromProductTyped(upf)))
   )
 
-  def upload(): Action[MultipartFormData[TemporaryFile]] = Action(parse.multipartFormData) { implicit request =>
+  lazy val upload: Action[MultipartFormData[TemporaryFile]] = Action(parse.multipartFormData) { implicit request =>
     logger.debug(s"Upload form contains dataParts=${summariseDataParts(request.body.dataParts)} and fileParts=${summariseFileParts(request.body.files)}")
     val validatedForm: Either[Seq[String], UploadPostForm] = uploadForm
       .bindFromRequest()

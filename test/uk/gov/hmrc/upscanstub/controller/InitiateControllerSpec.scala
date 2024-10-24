@@ -18,26 +18,28 @@ package uk.gov.hmrc.upscanstub.controller
 
 import org.apache.pekko.stream._
 import org.apache.pekko.stream.testkit.NoMaterializer
-import org.mockito.ArgumentMatchersSugar.argMatching
-import org.mockito.MockitoSugar
+import org.mockito.ArgumentMatchers.argThat
+import org.mockito.Mockito.when
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import play.api.http.HeaderNames.USER_AGENT
-import play.api.http.MimeTypes.XML
-import play.api.http.Status.{BAD_REQUEST, OK, UNSUPPORTED_MEDIA_TYPE}
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.Action
 import play.api.mvc.Results.Ok
 import play.api.test.FakeRequest
 import play.api.test.Helpers._
 import uk.gov.hmrc.upscanstub.model.Reference
-import uk.gov.hmrc.upscanstub.model.initiate.{PrepareUploadRequest, PrepareUploadResponse, UploadFormTemplate, UploadSettings}
+import uk.gov.hmrc.upscanstub.model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import uk.gov.hmrc.upscanstub.service.PrepareUploadService
 
 import scala.concurrent.Future
 
-class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
+class InitiateControllerSpec
+  extends AnyWordSpec
+     with Matchers
+     with GivenWhenThen
+     with MockitoSugar {
 
   import InitiateControllerSpec._
 
@@ -46,31 +48,19 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
   private val requestHeaders = (USER_AGENT, UserAgent)
 
   "Upscan Initiate V1 with only mandatory form fields" should {
-    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case
-        settings @ UploadSettings(
-          uploadUrl,
-          userAgent,
-          PrepareUploadRequest(
-            callbackUrl,
-            minimumFileSize,
-            maximumFileSize,
-            successRedirect,
-            errorRedirect,
-            consumingService
-          )
-        ) if uploadUrl.endsWith("/upload") &&
-          userAgent == UserAgent &&
-          callbackUrl == CallbackUrl &&
-          minimumFileSize.isEmpty &&
-          maximumFileSize.isEmpty &&
-          successRedirect.isEmpty &&
-          errorRedirect.isEmpty &&
-          consumingService.isEmpty &&
-          settings.consumingService == UserAgent => ()
-    }
+    val uploadSettingsMatcher: UploadSettings => Boolean =
+      settings =>
+        settings.uploadUrl.endsWith("/upload") &&
+        settings.userAgent == UserAgent &&
+        settings.prepareUploadRequest.callbackUrl == CallbackUrl &&
+        settings.prepareUploadRequest.minimumFileSize.isEmpty &&
+        settings.prepareUploadRequest.maximumFileSize.isEmpty &&
+        settings.prepareUploadRequest.successRedirect.isEmpty &&
+        settings.prepareUploadRequest.errorRedirect.isEmpty &&
+        settings.prepareUploadRequest.consumingService.isEmpty &&
+        settings.consumingService == UserAgent
 
-    behave like upscanInitiateTests(_.prepareUploadV1(), uploadSettingsMatcher = uploadSettingsMatcher)
+    behave like upscanInitiateTests(_.prepareUploadV1(), uploadSettingsMatcher)
   }
 
   "Upscan Initiate V1 with all form fields" should {
@@ -82,59 +72,35 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
       "consumingService" -> ConsumingService
     )
 
-    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case
-        settings @ UploadSettings(
-          uploadUrl,
-          userAgent,
-          PrepareUploadRequest(
-            callbackUrl,
-            minimumFileSize,
-            maximumFileSize,
-            successRedirect,
-            errorRedirect,
-            consumingService
-          )
-        ) if uploadUrl.endsWith("/upload") &&
-          userAgent == UserAgent &&
-          callbackUrl == CallbackUrl &&
-          minimumFileSize.contains(0L) &&
-          maximumFileSize.contains(1024L) &&
-          successRedirect.contains(SuccessRedirectUrl) &&
-          errorRedirect.isEmpty &&
-          consumingService.contains(ConsumingService) &&
-          settings.consumingService == ConsumingService => ()
-    }
+    val uploadSettingsMatcher: UploadSettings => Boolean =
+      settings =>
+        settings.uploadUrl.endsWith("/upload") &&
+        settings.userAgent == UserAgent &&
+        settings.prepareUploadRequest.callbackUrl == CallbackUrl &&
+        settings.prepareUploadRequest.minimumFileSize.contains(0L) &&
+        settings.prepareUploadRequest.maximumFileSize.contains(1024L) &&
+        settings.prepareUploadRequest.successRedirect.contains(SuccessRedirectUrl) &&
+        settings.prepareUploadRequest.errorRedirect.isEmpty &&
+        settings.prepareUploadRequest.consumingService.contains(ConsumingService) &&
+        settings.consumingService == ConsumingService
 
-    behave like upscanInitiateTests(_.prepareUploadV1(), optionalFields, uploadSettingsMatcher)
+    behave like upscanInitiateTests(_.prepareUploadV1(), uploadSettingsMatcher, optionalFields)
   }
 
   "Upscan Initiate V2 with only mandatory form fields" should {
-    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case
-        settings @ UploadSettings(
-          uploadUrl,
-          userAgent,
-          PrepareUploadRequest(
-            callbackUrl,
-            minimumFileSize,
-            maximumFileSize,
-            successRedirect,
-            errorRedirect,
-            consumingService
-          )
-        ) if uploadUrl.endsWith("/upload-proxy") &&
-          userAgent == UserAgent &&
-          callbackUrl == CallbackUrl &&
-          minimumFileSize.isEmpty &&
-          maximumFileSize.isEmpty &&
-          successRedirect.isEmpty &&
-          errorRedirect.isEmpty &&
-          consumingService.isEmpty &&
-          settings.consumingService == UserAgent => ()
-    }
+    val uploadSettingsMatcher: UploadSettings => Boolean =
+      settings =>
+        settings.uploadUrl.endsWith("/upload-proxy") &&
+        settings.userAgent == UserAgent &&
+        settings.prepareUploadRequest.callbackUrl == CallbackUrl &&
+        settings.prepareUploadRequest.minimumFileSize.isEmpty &&
+        settings.prepareUploadRequest.maximumFileSize.isEmpty &&
+        settings.prepareUploadRequest.successRedirect.isEmpty &&
+        settings.prepareUploadRequest.errorRedirect.isEmpty &&
+        settings.prepareUploadRequest.consumingService.isEmpty &&
+        settings.consumingService == UserAgent
 
-    behave like upscanInitiateTests(_.prepareUploadV2(), uploadSettingsMatcher = uploadSettingsMatcher)
+    behave like upscanInitiateTests(_.prepareUploadV2(), uploadSettingsMatcher)
   }
 
   "Upscan Initiate V2 with all form fields" should {
@@ -146,37 +112,27 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
       "successRedirect" -> SuccessRedirectUrl,
       "consumingService" -> ConsumingService
     )
-    val uploadSettingsMatcher: PartialFunction[Any, Unit] = {
-      case
-        settings @ UploadSettings(
-          uploadUrl,
-          userAgent,
-          PrepareUploadRequest(
-            callbackUrl,
-            minimumFileSize,
-            maximumFileSize,
-            successRedirect,
-            errorRedirect,
-            consumingService
-          )
-        ) if uploadUrl.endsWith("/upload-proxy") &&
-          userAgent == UserAgent &&
-          callbackUrl == CallbackUrl &&
-          minimumFileSize.contains(0L) &&
-          maximumFileSize.contains(1024L) &&
-          successRedirect.contains(SuccessRedirectUrl) &&
-          errorRedirect.contains(ErrorRedirectUrl) &&
-          consumingService.contains(ConsumingService) &&
-          settings.consumingService == ConsumingService => ()
-    }
+    val uploadSettingsMatcher: UploadSettings => Boolean =
+      settings =>
+        settings.uploadUrl.endsWith("/upload-proxy") &&
+        settings.userAgent == UserAgent &&
+        settings.prepareUploadRequest.callbackUrl == CallbackUrl &&
+        settings.prepareUploadRequest.minimumFileSize.contains(0L) &&
+        settings.prepareUploadRequest.maximumFileSize.contains(1024L) &&
+        settings.prepareUploadRequest.successRedirect.contains(SuccessRedirectUrl) &&
+        settings.prepareUploadRequest.errorRedirect.contains(ErrorRedirectUrl) &&
+        settings.prepareUploadRequest.consumingService.contains(ConsumingService) &&
+        settings.consumingService == ConsumingService
 
-    behave like upscanInitiateTests(_.prepareUploadV2(), extraRequestFields, uploadSettingsMatcher)
+    behave like upscanInitiateTests(_.prepareUploadV2(), uploadSettingsMatcher, extraRequestFields)
   }
 
-  private def upscanInitiateTests(// scalastyle:ignore
-                                  route: InitiateController => Action[JsValue],
-                                  extraRequestFields: JsObject = JsObject.empty,
-                                  uploadSettingsMatcher: PartialFunction[Any, Unit]): Unit = {
+  private def upscanInitiateTests(
+    // scalastyle:ignore
+    route                : InitiateController => Action[JsValue],
+    uploadSettingsMatcher: UploadSettings => Boolean,
+    extraRequestFields   : JsObject = JsObject.empty
+  ): Unit = {
 
     "return expected JSON for prepare upload when passed valid request" in {
       Given("a request containing a valid JSON body")
@@ -189,7 +145,8 @@ class InitiateControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
         UploadFormTemplate(UploadUrl, Map.empty)
       )
       val prepareService = mock[PrepareUploadService]
-      when(prepareService.prepareUpload(argMatching(uploadSettingsMatcher))).thenReturn(preparedUpload)
+      when(prepareService.prepareUpload(argThat(uploadSettings => uploadSettingsMatcher(uploadSettings))))
+        .thenReturn(preparedUpload)
 
       val controller = new InitiateController(prepareService, stubControllerComponents())
       val result = route(controller)(request)

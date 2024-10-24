@@ -20,7 +20,6 @@ import play.api.Logger
 import play.api.libs.json.{JsValue, Json, _}
 import play.api.mvc.{Action, Call, ControllerComponents, Result}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.upscanstub.controller.routes
 import uk.gov.hmrc.upscanstub.filter.UserAgentFilter
 import uk.gov.hmrc.upscanstub.model.initiate._
 import uk.gov.hmrc.upscanstub.service.PrepareUploadService
@@ -39,13 +38,15 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
   private val prepareUploadRequestReadsV1: Reads[PrepareUploadRequest] =
     PrepareUploadRequest.readsV1(PrepareUploadService.maxFileSize)
 
-  def prepareUploadV1(): Action[JsValue] =
+  // because of cyclical dependency between routes and controllers, this must be lazy
+  // for the correct reverse route url
+  lazy val prepareUploadV1: Action[JsValue] =
     prepareUpload(routes.UploadController.upload)(prepareUploadRequestReadsV1)
 
   private val prepareUploadRequestReadsV2: Reads[PrepareUploadRequest] =
     PrepareUploadRequest.readsV2(PrepareUploadService.maxFileSize)
 
-  def prepareUploadV2(): Action[JsValue] =
+  lazy val prepareUploadV2: Action[JsValue] =
     prepareUpload(routes.UploadProxyController.upload)(prepareUploadRequestReadsV2)
 
   private def prepareUpload(uploadCall: Call)(implicit reads: Reads[PrepareUploadRequest]): Action[JsValue] =
