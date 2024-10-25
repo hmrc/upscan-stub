@@ -18,7 +18,6 @@ package uk.gov.hmrc.upscanstub.controller
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.testkit.NoMaterializer
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
 import org.scalatest.GivenWhenThen
@@ -32,7 +31,7 @@ import play.api.test.Helpers._
 import uk.gov.hmrc.upscanstub.model._
 import uk.gov.hmrc.upscanstub.service._
 import uk.gov.hmrc.upscanstub.test.util.CreateTempFileFromResource
-import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
+import uk.gov.hmrc.upscanstub.util.Base64StringUtils
 
 import java.net.URL
 import java.time.{Clock, Instant, ZoneId}
@@ -45,30 +44,29 @@ class UploadControllerSpec
      with GivenWhenThen
      with MockitoSugar:
 
-  implicit val actorSystem: ActorSystem   = ActorSystem()
-  implicit val materializer: Materializer = NoMaterializer
+  given ActorSystem = ActorSystem()
 
   private val initiateDate = Instant.parse("2018-04-24T09:30:00Z")
-  private val testClock    = new TestClock(initiateDate)
+  private val testClock    = TestClock(initiateDate)
 
   "UploadController" should:
     "upload a successfully POSTed form and file" in:
 
       Given("a valid form containing a valid file")
       val fileToUpload = CreateTempFileFromResource("/text-to-upload.txt")
-      val filePart = new MultipartFormData.FilePart[TemporaryFile](
+      val filePart = MultipartFormData.FilePart[TemporaryFile](
         key         = "file",
         filename    = "text-to-upload.pdf",
         contentType = None,
         fileToUpload,
         fileSize    = fileToUpload.length()
       )
-      val formDataBody = new MultipartFormData[TemporaryFile](
+      val formDataBody = MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
+          "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -87,10 +85,10 @@ class UploadControllerSpec
 
       val notificationProcessor = mock[NotificationQueueProcessor]
       val virusScanner          = mock[VirusScanner]
-      Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
+      Mockito.when(virusScanner.checkIfClean(any())).thenReturn(ScanningResult.Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
+        UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -101,10 +99,10 @@ class UploadControllerSpec
       And("the notification service should be called")
       Mockito
         .verify(notificationProcessor)
-        .enqueueNotification(UploadedFile(
-          new URL("http://mylocalservice.com/callback"),
+        .enqueueNotification(ProcessedFile.UploadedFile(
           Reference("file-key"),
-          new URL(s"http://localhost/download/${fileId.value}"),
+          URL("http://mylocalservice.com/callback"),
+          URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
             uploadTimestamp = initiateDate,
             checksum        = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -121,19 +119,19 @@ class UploadControllerSpec
     "return HTTP redirect when redirect after success requested" in:
       Given("a valid form containing a valid file")
       val fileToUpload = CreateTempFileFromResource("/text-to-upload.txt")
-      val filePart = new MultipartFormData.FilePart[TemporaryFile](
+      val filePart = MultipartFormData.FilePart[TemporaryFile](
         key         = "file",
         filename    = "text-to-upload.pdf",
         contentType = None,
         fileToUpload,
         fileSize    = fileToUpload.length()
       )
-      val formDataBody = new MultipartFormData[TemporaryFile](
+      val formDataBody = MultipartFormData[TemporaryFile](
         dataParts = Map(
           "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
           "x-amz-credential"        -> Seq("some-credentials"),
           "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
+          "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
           "x-amz-signature"         -> Seq("some-signature"),
           "acl"                     -> Seq("private"),
           "key"                     -> Seq("file-key"),
@@ -156,10 +154,10 @@ class UploadControllerSpec
       val notificationProcessor = mock[NotificationQueueProcessor]
       val virusScanner          = mock[VirusScanner]
       Mockito.when(virusScanner.checkIfClean(any()))
-        .thenReturn(Clean)
+        .thenReturn(ScanningResult.Clean)
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
+        UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -170,10 +168,10 @@ class UploadControllerSpec
       And("the notification service should be called")
       Mockito
         .verify(notificationProcessor)
-        .enqueueNotification(UploadedFile(
-          new URL("http://mylocalservice.com/callback"),
+        .enqueueNotification(ProcessedFile.UploadedFile(
           Reference("file-key"),
-          new URL(s"http://localhost/download/${fileId.value}"),
+          URL("http://mylocalservice.com/callback"),
+          URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
             uploadTimestamp = initiateDate,
             checksum        = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -191,25 +189,27 @@ class UploadControllerSpec
     "store details of a file that fails virus scanning and return successful" in:
       Given("a valid form containing a valid file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "text-to-upload.txt",
           None,
           CreateTempFileFromResource("/text-to-upload.txt"))
-      val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+
+      val formDataBody: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
       val uploadRequest = FakeRequest().withBody(formDataBody)
 
       val storedFile     = StoredFile(Array())
@@ -218,10 +218,11 @@ class UploadControllerSpec
 
       val notificationProcessor = mock[NotificationQueueProcessor]
       val virusScanner          = mock[VirusScanner]
-      Mockito.when(virusScanner.checkIfClean(any())).thenReturn(VirusFound("This test file failed scanning"))
+      Mockito.when(virusScanner.checkIfClean(any()))
+        .thenReturn(ScanningResult.VirusFound("This test file failed scanning"))
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
+        UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -233,10 +234,11 @@ class UploadControllerSpec
       Mockito
         .verify(notificationProcessor)
         .enqueueNotification(
-          QuarantinedFile(
-            new URL("http://mylocalservice.com/callback"),
+          ProcessedFile.QuarantinedFile(
             Reference("file-key"),
-            "This test file failed scanning"))
+            URL("http://mylocalservice.com/callback"),
+            "This test file failed scanning")
+        )
 
       And("a No Content response should be returned")
       val uploadStatus = status(uploadResult)
@@ -245,22 +247,26 @@ class UploadControllerSpec
     "error on an incomplete POSTed form" in:
       Given("an invalid form containing a valid file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "text-to-upload.txt",
           None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+          CreateTempFileFromResource("/text-to-upload.txt")
+        )
+
+      val formDataBody: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
+
       val uploadRequest = FakeRequest().withBody(formDataBody)
 
       val storageService        = mock[FileStorageService]
@@ -268,7 +274,7 @@ class UploadControllerSpec
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
+        UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -290,26 +296,30 @@ class UploadControllerSpec
     "redirect on a forced rejected upload" in:
       Given("a valid form containing a valid file with forced error name schema")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "reject.UnexpectedContent.txt",
           None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback"),
-          "error_action_redirect" -> Seq("https://localhost")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+          CreateTempFileFromResource("/text-to-upload.txt")
+        )
+
+      val formDataBody: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback"),
+            "error_action_redirect" -> Seq("https://localhost")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
+
       val uploadRequest = FakeRequest().withBody(formDataBody)
 
       val storageService        = mock[FileStorageService]
@@ -317,7 +327,7 @@ class UploadControllerSpec
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
+        UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)
@@ -334,20 +344,22 @@ class UploadControllerSpec
 
     "error when no file in POSTed form" in:
       Given("a valid form containing a NO file")
-      val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Nil,
-        badParts = Nil
-      )
+      val formDataBody: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Nil,
+          badParts = Nil
+        )
+
       val uploadRequest = FakeRequest().withBody(formDataBody)
 
       val storageService        = mock[FileStorageService]
@@ -355,7 +367,7 @@ class UploadControllerSpec
       val virusScanner          = mock[VirusScanner]
 
       val controller =
-        new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
+        UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
 
       When("upload is called")
       val uploadResult: Future[Result] = controller.upload()(uploadRequest)

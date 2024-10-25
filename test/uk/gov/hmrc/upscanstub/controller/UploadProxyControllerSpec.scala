@@ -41,7 +41,7 @@ class UploadProxyControllerSpec
 
   import UploadProxyControllerSpec._
 
-  private implicit val timeout: Timeout = Timeout(1.second)
+  private given Timeout = Timeout(1.second)
 
   "UploadProxyController's ErrorResponseHandler" should:
     "redirect providing error details as query parameters when a redirectUrl is specified" in:

@@ -22,7 +22,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.upscanstub.model.initiate.{PrepareUploadRequest, PrepareUploadResponse, UploadSettings}
-import uk.gov.hmrc.upscanstub.util.Implicits._
+import uk.gov.hmrc.upscanstub.util.Base64StringUtils
 
 class PrepareUploadServiceSpec
   extends AnyWordSpec
@@ -30,7 +30,7 @@ class PrepareUploadServiceSpec
      with OptionValues:
 
   "PrepareUploadService.prepareUpload" should:
-    val testInstance = new PrepareUploadService()
+    val testInstance = PrepareUploadService()
     val userAgent    = "PrepareUploadServiceSpec"
 
     val prepareUploadRequest =
@@ -142,7 +142,7 @@ class PrepareUploadServiceSpec
       val result = testInstance.prepareUpload(settings)
 
       import scala.jdk.CollectionConverters._
-      val successActionRedirectUrl = result.uploadRequest.fields.get("success_action_redirect").map(new URIBuilder(_)).value
+      val successActionRedirectUrl = result.uploadRequest.fields.get("success_action_redirect").map(URIBuilder(_)).value
       val successActionQueryParams = successActionRedirectUrl.getQueryParams.asScala
 
       result.uploadRequest.fields.get("error_action_redirect") should contain ("https://www.example.com/error?upload=1234")
@@ -188,7 +188,7 @@ class PrepareUploadServiceSpec
   )(
     block: (Option[Long], Option[Long]) => T
   ): T =
-    val policyJson: JsValue = Json.parse(preparedUpload.uploadRequest.fields("policy").base64decode())
+    val policyJson: JsValue = Json.parse(Base64StringUtils.base64decode(preparedUpload.uploadRequest.fields("policy")))
 
     val conditions = (policyJson \ "conditions")(0)
 

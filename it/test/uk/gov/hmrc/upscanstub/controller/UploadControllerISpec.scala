@@ -18,18 +18,18 @@ package uk.gov.hmrc.upscanstub.controller
 
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.testkit.NoMaterializer
 import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.http.Writeable
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.{JsArray, JsValue, Json}
 import play.api.mvc.MultipartFormData
 import play.api.test.Helpers._
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import uk.gov.hmrc.upscanstub.it.util.{CreateTempFileFromResource, MultipartFormDataWritable}
-import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
+import uk.gov.hmrc.upscanstub.util.Base64StringUtils
 
 import scala.xml.{Elem, XML}
 
@@ -39,37 +39,40 @@ class UploadControllerISpec
      with GuiceOneAppPerSuite
      with GivenWhenThen:
 
-  implicit val actorSystem: ActorSystem   = ActorSystem()
-  implicit val materializer: Materializer = NoMaterializer
+  given ActorSystem = ActorSystem()
+
+  given Writeable[MultipartFormData[TemporaryFile]] = MultipartFormDataWritable.writeable
 
   "UploadController" should:
     "return NoContent for valid upload request without redirect on success" in:
       Given("a valid POST multipart form request containing a file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "text-to-upload.txt",
           None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+          CreateTempFileFromResource("/text-to-upload.txt")
+        )
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
 
       val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
 
       When("a request is posted to the /upload endpoint")
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a NoContent response should be returned")
@@ -78,31 +81,33 @@ class UploadControllerISpec
     "return Redirect for valid upload request with redirect on success" in:
       Given("a valid POST multipart form request containing a file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "text-to-upload.txt",
           None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "success_action_redirect" -> Seq("https://localhost"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+          CreateTempFileFromResource("/text-to-upload.txt")
+        )
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "success_action_redirect" -> Seq("https://localhost"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
 
       val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
 
       When("a request is posted to the /upload endpoint")
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a NoContent response should be returned")
@@ -112,29 +117,31 @@ class UploadControllerISpec
     "return Bad Request for invalid form upload request" in:
       Given("a invalid POST multipart form request containing a file")
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "text-to-upload.txt",
           None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"  -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential" -> Seq("some-credentials"),
-          "x-amz-date"       -> Seq("20180517T113023Z"),
-          "policy"           -> Seq("{\"policy\":null}".base64encode()),
-          "x-amz-signature"  -> Seq("some-signature"),
-          "acl"              -> Seq("private"),
-          "key"              -> Seq("file-key")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+          CreateTempFileFromResource("/text-to-upload.txt")
+        )
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"  -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential" -> Seq("some-credentials"),
+            "x-amz-date"       -> Seq("20180517T113023Z"),
+            "policy"           -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
+            "x-amz-signature"  -> Seq("some-signature"),
+            "acl"              -> Seq("private"),
+            "key"              -> Seq("file-key")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
 
       val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
 
       When("a request is posted to the /upload endpoint")
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a Bad Request response should be returned")
@@ -152,25 +159,25 @@ class UploadControllerISpec
 
     "return Bad Request for an upload request containing no file" in:
       Given("a valid POST multipart form request containing NO file")
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "policy"                  -> Seq("{\"policy\":null}".base64encode()),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Nil,
-        badParts = Nil
-      )
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode("{\"policy\":null}")),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Nil,
+          badParts = Nil
+        )
 
       val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
 
       When("a request is posted to the /upload endpoint")
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a NoContent response should be returned")
@@ -191,30 +198,32 @@ class UploadControllerISpec
       val policy = policyWithContentLengthRange(100, 1000)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "text-to-upload.txt",
           None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "policy"                  -> Seq(Json.stringify(policy).base64encode()),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+          CreateTempFileFromResource("/text-to-upload.txt")
+        )
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode(Json.stringify(policy))),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
 
       val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
 
       When("the request is POSTed to the /upscan/upload")
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a Bad Request response should be returned")
@@ -233,30 +242,32 @@ class UploadControllerISpec
       val policy = policyWithContentLengthRange(5, 10)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile](
+        MultipartFormData.FilePart[TemporaryFile](
           "file",
           "text-to-upload.txt",
           None,
-          CreateTempFileFromResource("/text-to-upload.txt"))
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = Map(
-          "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
-          "x-amz-credential"        -> Seq("some-credentials"),
-          "x-amz-date"              -> Seq("20180517T113023Z"),
-          "x-amz-signature"         -> Seq("some-signature"),
-          "policy"                  -> Seq(Json.stringify(policy).base64encode()),
-          "acl"                     -> Seq("private"),
-          "key"                     -> Seq("file-key"),
-          "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
-        ),
-        files    = Seq(filePart),
-        badParts = Nil
-      )
+          CreateTempFileFromResource("/text-to-upload.txt")
+        )
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = Map(
+            "x-amz-algorithm"         -> Seq("AWS4-HMAC-SHA256"),
+            "x-amz-credential"        -> Seq("some-credentials"),
+            "x-amz-date"              -> Seq("20180517T113023Z"),
+            "x-amz-signature"         -> Seq("some-signature"),
+            "policy"                  -> Seq(Base64StringUtils.base64encode(Json.stringify(policy))),
+            "acl"                     -> Seq("private"),
+            "key"                     -> Seq("file-key"),
+            "x-amz-meta-callback-url" -> Seq("http://mylocalservice.com/callback")
+          ),
+          files    = Seq(filePart),
+          badParts = Nil
+        )
 
       val uploadRequest = FakeRequest(Helpers.POST, "/upscan/upload", FakeHeaders(), postBodyForm)
 
       When("the request is POSTed to the /upscan/upload")
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(app, uploadRequest).get
 
       Then("a Bad Request response should be returned")

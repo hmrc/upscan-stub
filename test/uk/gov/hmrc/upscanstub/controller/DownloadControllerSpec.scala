@@ -38,8 +38,7 @@ class DownloadControllerSpec
       with GivenWhenThen
       with MockitoSugar:
 
-  implicit val actorSystem: ActorSystem   = ActorSystem()
-  implicit val materializer: Materializer = NoMaterializer
+  given ActorSystem = ActorSystem()
 
   "DownloadController" should:
     "retrieve file from storage if available" in:
@@ -50,7 +49,7 @@ class DownloadControllerSpec
       val storageService = mock[FileStorageService]
       Mockito.when(storageService.get(FileId(validFileId))).thenReturn(storedFile)
 
-      val controller = new DownloadController(storageService, stubControllerComponents())
+      val controller = DownloadController(storageService, stubControllerComponents())
 
       When("download is called")
       val downloadResult: Future[Result] = controller.download(validFileId)(FakeRequest())
@@ -71,7 +70,7 @@ class DownloadControllerSpec
       val storageService = mock[FileStorageService]
       Mockito.when(storageService.get(FileId(validFileId))).thenReturn(storedFile)
 
-      val controller = new DownloadController(storageService, stubControllerComponents())
+      val controller = DownloadController(storageService, stubControllerComponents())
 
       When("download is called")
       val downloadResult: Future[Result] = controller.download(validFileId)(FakeRequest())

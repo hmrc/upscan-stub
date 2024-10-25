@@ -29,7 +29,7 @@ class NotificationQueueProcessor(
   notificationService: NotificationSender,
   maximumRetryCount  : Int            = 10,
   retryDelay         : FiniteDuration = 30.seconds
-)(implicit actorSystem: ActorSystem):
+)(using actorSystem: ActorSystem):
 
   private val notificationProcessingActor =
     actorSystem.actorOf(QueueProcessingActor(notificationService, maximumRetryCount, retryDelay))
@@ -59,9 +59,9 @@ class QueueProcessingActor(
   retryDelay        : FiniteDuration
 ) extends Actor with ActorLogging {
 
-  implicit val timeout: Timeout = Timeout(5.seconds)
+  given Timeout = Timeout(5.seconds)
 
-  implicit val ec: ExecutionContext = context.system.dispatcher
+  given ExecutionContext = context.system.dispatcher
 
   private var running = false
 

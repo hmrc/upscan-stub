@@ -37,21 +37,17 @@ class InitiateController @Inject()(
 
   private val logger = Logger(this.getClass)
 
-  private val prepareUploadRequestReadsV1: Reads[PrepareUploadRequest] =
-    PrepareUploadRequest.readsV1(PrepareUploadService.maxFileSize)
-
   // because of cyclical dependency between routes and controllers, this must be lazy
   // for the correct reverse route url
   lazy val prepareUploadV1: Action[JsValue] =
-    prepareUpload(routes.UploadController.upload)(prepareUploadRequestReadsV1)
-
-  private val prepareUploadRequestReadsV2: Reads[PrepareUploadRequest] =
-    PrepareUploadRequest.readsV2(PrepareUploadService.maxFileSize)
+    given Reads[PrepareUploadRequest] = PrepareUploadRequest.readsV1(PrepareUploadService.maxFileSize)
+    prepareUpload(routes.UploadController.upload)
 
   lazy val prepareUploadV2: Action[JsValue] =
-    prepareUpload(routes.UploadProxyController.upload)(prepareUploadRequestReadsV2)
+    given Reads[PrepareUploadRequest] = PrepareUploadRequest.readsV2(PrepareUploadService.maxFileSize)
+    prepareUpload(routes.UploadProxyController.upload)
 
-  private def prepareUpload(uploadCall: Call)(implicit reads: Reads[PrepareUploadRequest]): Action[JsValue] =
+  private def prepareUpload(uploadCall: Call)(using Reads[PrepareUploadRequest]): Action[JsValue] =
     withUserAgentHeader(logger, cc.actionBuilder):
       Action.async(parse.json): request =>
         given Request[JsValue] = request

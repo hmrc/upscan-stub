@@ -33,36 +33,32 @@ trait NotificationSender:
 case class ReadyCallbackBody(
   reference    : Reference,
   downloadUrl  : URL,
-  fileStatus   : FileStatus   = ReadyFileStatus,
+  fileStatus   : FileStatus   = FileStatus.Ready,
   uploadDetails: UploadDetails
 )
 
 object ReadyCallbackBody:
-  import JsonWriteHelpers.urlFormats
-  implicit val writesReadyCallback: Writes[ReadyCallbackBody] =
+  private given Writes[URL] =
+    (o: URL) => JsString(o.toString)
+  given Writes[ReadyCallbackBody] =
     Json.writes[ReadyCallbackBody]
 
 case class FailedCallbackBody(
   reference     : Reference,
-  fileStatus    : FileStatus = FailedFileStatus,
+  fileStatus    : FileStatus = FileStatus.Failed,
   failureDetails: ErrorDetails
 )
 
 object FailedCallbackBody:
-  implicit val writesFailedCallback: Writes[FailedCallbackBody] =
+  given Writes[FailedCallbackBody] =
     Json.writes[FailedCallbackBody]
 
-sealed trait FileStatus:
-  val status: String
-
-case object ReadyFileStatus extends FileStatus:
-  override val status: String = "READY"
-
-case object FailedFileStatus extends FileStatus:
-  override val status: String = "FAILED"
+enum FileStatus(val status: String):
+  case Ready  extends FileStatus("READY")
+  case Failed extends FileStatus("FAILED")
 
 object FileStatus:
-  implicit val fileStatusWrites: Writes[FileStatus] =
+  given Writes[FileStatus] =
     (o: FileStatus) => JsString(o.status)
 
 case class ErrorDetails(
@@ -71,22 +67,22 @@ case class ErrorDetails(
 )
 
 object ErrorDetails:
-  implicit val formatsErrorDetails: Format[ErrorDetails] =
+  given Format[ErrorDetails] =
     Json.format[ErrorDetails]
 
 class HttpNotificationSender @Inject()(
   httpClient : HttpClient,
   actorSystem: ActorSystem,
   config     : Configuration,
-)(implicit
-  ec: ExecutionContext
+)(using
+  ExecutionContext
 ) extends NotificationSender:
 
   import uk.gov.hmrc.http.HttpReads.Implicits._
 
   private val logger = Logger(this.getClass)
 
-  private implicit val hc: HeaderCarrier = HeaderCarrier()
+  private given HeaderCarrier = HeaderCarrier()
 
   private val artificialDelay =
     config.getMillis("notifications.artificial-delay").millis // TODO configure duration
@@ -94,12 +90,12 @@ class HttpNotificationSender @Inject()(
   override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
     withArtificialDelay(artificialDelay):
       uploadedFile match
-        case f: UploadedFile      => notifySuccessfulCallback(f)
-        case f: QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
-        case f: RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
-        case f: UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
+        case f: ProcessedFile.UploadedFile      => notifySuccessfulCallback(f)
+        case f: ProcessedFile.QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
+        case f: ProcessedFile.RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
+        case f: ProcessedFile.UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
 
-  private def notifySuccessfulCallback(uploadedFile: UploadedFile): Future[Unit] =
+  private def notifySuccessfulCallback(uploadedFile: ProcessedFile.UploadedFile): Future[Unit] =
     val callback =
       ReadyCallbackBody(uploadedFile.reference, uploadedFile.downloadUrl, uploadDetails = uploadedFile.uploadDetails)
 

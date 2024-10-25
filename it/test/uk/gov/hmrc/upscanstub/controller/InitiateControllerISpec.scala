@@ -29,6 +29,7 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.test.Helpers.{contentAsJson, contentAsString, route, status}
 import play.api.test.{FakeHeaders, FakeRequest, Helpers}
 import uk.gov.hmrc.upscanstub.model.initiate.PrepareUploadResponse
+import uk.gov.hmrc.upscanstub.util.Base64StringUtils
 
 import scala.concurrent.duration._
 
@@ -39,8 +40,8 @@ class InitiateControllerISpec
      with GivenWhenThen
      with OptionValues:
 
-  private implicit val actorSystem: ActorSystem                   = ActorSystem()
-  private implicit val timeout    : org.apache.pekko.util.Timeout = 10.seconds
+  private given ActorSystem                   = ActorSystem()
+  private given org.apache.pekko.util.Timeout = 10.seconds
 
   private val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
@@ -248,11 +249,9 @@ class InitiateControllerISpec
   )(
     block: (Option[Long], Option[Long]) => T
   ): T =
-    import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
-
     val maybeBase64policy = (responseBodyJson \ "uploadRequest" \ "fields" \ "policy").asOpt[String]
 
-    val policyJson: JsValue = Json.parse(maybeBase64policy.get.base64decode())
+    val policyJson: JsValue = Json.parse(Base64StringUtils.base64decode(maybeBase64policy.get))
 
     val conditions = (policyJson \ "conditions")(0)
 

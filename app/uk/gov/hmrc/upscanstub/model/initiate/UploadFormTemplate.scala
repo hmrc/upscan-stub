@@ -24,5 +24,5 @@ case class UploadFormTemplate(
 )
 
 object UploadFormTemplate:
-  implicit val writes: Format[UploadFormTemplate] =
+  given Format[UploadFormTemplate] =
     Json.format[UploadFormTemplate]

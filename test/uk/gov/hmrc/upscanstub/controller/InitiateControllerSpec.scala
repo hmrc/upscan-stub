@@ -43,7 +43,7 @@ class InitiateControllerSpec
 
   import InitiateControllerSpec._
 
-  private implicit val materializer: Materializer = NoMaterializer
+  private given Materializer = NoMaterializer
 
   private val requestHeaders = (USER_AGENT, UserAgent)
 
@@ -143,7 +143,7 @@ class InitiateControllerSpec
       when(prepareService.prepareUpload(argThat(uploadSettings => uploadSettingsMatcher(uploadSettings))))
         .thenReturn(preparedUpload)
 
-      val controller = new InitiateController(prepareService, stubControllerComponents())
+      val controller = InitiateController(prepareService, stubControllerComponents())
       val result = route(controller)(request)
 
       Then("a successful HTTP response should be returned")
@@ -172,8 +172,8 @@ class InitiateControllerSpec
 
       When("the prepare upload method is called")
       val prepareService = mock[PrepareUploadService]
-      val controller = new InitiateController(prepareService, stubControllerComponents())
-      val result = route(controller)(request)
+      val controller     = InitiateController(prepareService, stubControllerComponents())
+      val result         = route(controller)(request)
 
       Then("a BadRequest response should be returned")
       status(result) shouldBe BAD_REQUEST
@@ -185,14 +185,14 @@ class InitiateControllerSpec
 
       When("the prepare upload method is called")
       val prepareService = mock[PrepareUploadService]
-      val controller = new InitiateController(prepareService, stubControllerComponents())
-      val result = route(controller)(request).run()
+      val controller     = InitiateController(prepareService, stubControllerComponents())
+      val result         = route(controller)(request).run()
 
       Then("an Unsupported Media Type response should be returned")
       status(result) shouldBe UNSUPPORTED_MEDIA_TYPE
 
     "allow https callback urls" in:
-      val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())
+      val controller = InitiateController(mock[PrepareUploadService], stubControllerComponents())
 
       val result =
         controller.withAllowedCallbackProtocol("https://my.callback.url"):
@@ -201,21 +201,21 @@ class InitiateControllerSpec
       status(result) shouldBe OK
 
     "disallow http callback urls" in:
-      val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())
+      val controller = InitiateController(mock[PrepareUploadService], stubControllerComponents())
 
       val result =
         controller.withAllowedCallbackProtocol("http://my.callback.url"):
-          Future.failed(new RuntimeException("This block should not have been invoked."))
+          Future.failed(RuntimeException("This block should not have been invoked."))
 
       status(result)          shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid callback url protocol")
 
     "disallow invalidly formatted callback urls" in:
-      val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())
+      val controller = InitiateController(mock[PrepareUploadService], stubControllerComponents())
 
       val result =
         controller.withAllowedCallbackProtocol("123"):
-          Future.failed(new RuntimeException("This block should not have been invoked."))
+          Future.failed(RuntimeException("This block should not have been invoked."))
 
       status(result)          shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid callback url format")

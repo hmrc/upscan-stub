@@ -36,8 +36,7 @@ class DownloadControllerISpec
      with GuiceOneAppPerSuite
      with GivenWhenThen:
 
-  implicit val actorSystem: ActorSystem   = ActorSystem()
-  implicit val materializer: Materializer = NoMaterializer
+  given ActorSystem = ActorSystem()
 
   "DownloadController" should:
     "download a file" in:

@@ -33,7 +33,7 @@ object FileId:
     FileId(UUID.randomUUID().toString)
 
 object Reference:
-  implicit val referenceFormat: Format[Reference] =
+  given Format[Reference] =
     new Format[Reference]:
 
       override def writes(reference: Reference): JsValue =
@@ -61,9 +61,6 @@ case class UploadPostForm(
 
 //Internal model of uploaded file
 
-sealed trait ProcessedFile:
-  def reference: Reference
-
 case class UploadDetails(
   uploadTimestamp: Instant,
   checksum       : String,
@@ -73,33 +70,37 @@ case class UploadDetails(
 )
 
 object UploadDetails:
-  implicit val writesUploadDetails: Writes[UploadDetails] =
+  given Writes[UploadDetails] =
     Json.writes[UploadDetails]
 
-case class UploadedFile(
-  callbackUrl  : URL,
-  reference    : Reference,
-  downloadUrl  : URL,
-  uploadDetails: UploadDetails
-) extends ProcessedFile
+enum ProcessedFile(
+  val reference: Reference
+):
 
-case class QuarantinedFile(
-  callbackUrl: URL,
-  reference  : Reference,
-  error      : String
-) extends ProcessedFile
+  case UploadedFile(
+    override val reference : Reference,
+    callbackUrl            : URL,
+    downloadUrl            : URL,
+    uploadDetails          : UploadDetails
+  ) extends ProcessedFile(reference)
 
-case class RejectedFile(
-  callbackUrl: URL,
-  reference  : Reference,
-  error      : String
-) extends ProcessedFile
+  case QuarantinedFile(
+    override val reference  : Reference,
+    callbackUrl             : URL,
+    error                   : String
+  ) extends ProcessedFile(reference)
 
-case class UnknownReasonFile(
-  callbackUrl: URL,
-  reference  : Reference,
-  error      : String
-) extends ProcessedFile
+  case RejectedFile(
+    override val reference : Reference,
+    callbackUrl            : URL,
+    error                  : String
+  ) extends ProcessedFile(reference)
+
+  case UnknownReasonFile(
+    override val reference : Reference,
+    callbackUrl            : URL,
+    error                  : String
+  ) extends ProcessedFile(reference)
 
 case class AWSError(
   code     : String,
@@ -107,11 +108,10 @@ case class AWSError(
   requestId: String
 )
 
-sealed trait ForcedTestFileError
-
-case class ForcedTestFileErrorQuarantine(message: String) extends ForcedTestFileError
-case class ForcedTestFileErrorRejected  (message: String) extends ForcedTestFileError
-case class ForcedTestFileErrorUnknown   (message: String) extends ForcedTestFileError
+enum ForcedTestFileError:
+  case Quarantine(message: String) extends ForcedTestFileError
+  case Rejected  (message: String) extends ForcedTestFileError
+  case Unknown   (message: String) extends ForcedTestFileError
 
 
 // Parse a json String representing an AWS policy, and extract the min/max values for the content-length-range condition.

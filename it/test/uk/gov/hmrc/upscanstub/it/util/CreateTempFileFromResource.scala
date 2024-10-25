@@ -21,15 +21,12 @@ import play.api.libs.Files.SingletonTemporaryFileCreator
 
 import java.io.{FileOutputStream, InputStream}
 
-object CreateTempFileFromResource {
+object CreateTempFileFromResource:
 
-  def apply(path : String) = {
-
+  def apply(path : String) =
     val testResource: InputStream = getClass.getResourceAsStream(path)
     assert(testResource != null, s"Resource $path not found")
-    val tempFile = SingletonTemporaryFileCreator.create("file", "tmp")
-    IOUtils.copy(testResource, new FileOutputStream(tempFile))
-    tempFile
-  }
 
-}
+    val tempFile = SingletonTemporaryFileCreator.create("file", "tmp")
+    IOUtils.copy(testResource, FileOutputStream(tempFile))
+    tempFile

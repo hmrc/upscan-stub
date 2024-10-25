@@ -10,9 +10,6 @@ lazy val microservice = Project("upscan-stub", file("."))
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test
   )
   .settings(scalacOptions += "-Wconf:src=routes/.*:s")
-  .settings(
-  //  scalacOptions += "-Wconf:cat=unused-imports&src=html/.*:s",
-  )
   .settings(resolvers += Resolver.jcenterRepo)
   .settings(PlayKeys.playDefaultPort := 9570)
 

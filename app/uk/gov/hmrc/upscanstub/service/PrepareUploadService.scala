@@ -20,6 +20,7 @@ import org.apache.http.client.utils.URIBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
 import uk.gov.hmrc.upscanstub.model._
 import uk.gov.hmrc.upscanstub.model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
+import uk.gov.hmrc.upscanstub.util.Base64StringUtils
 
 import java.net.URISyntaxException
 import java.time.format.DateTimeFormatter
@@ -34,8 +35,7 @@ class PrepareUploadService @Inject()():
   case class Policy(json: JsObject):
 
     def asBase64String(): String =
-      import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
-      Json.stringify(json).base64encode()
+      Base64StringUtils.base64encode(Json.stringify(json))
 
   def prepareUpload(settings: UploadSettings): PrepareUploadResponse =
     val reference = generateReference()
@@ -68,7 +68,7 @@ class PrepareUploadService @Inject()():
 
   private def successRedirectWithReference(successRedirect: String, reference: Reference): String =
     try
-      val builder = new URIBuilder(successRedirect)
+      val builder = URIBuilder(successRedirect)
       builder.addParameter("key", reference.value)
       builder.build().toASCIIString
     catch

@@ -28,7 +28,7 @@ class FileStorageServiceSpec
      with Matchers
      with GivenWhenThen:
 
-  val fileStorageService = new FileStorageService
+  val fileStorageService = FileStorageService()
 
   "File storage service" should:
     "Allow to store and retrieve file" in:

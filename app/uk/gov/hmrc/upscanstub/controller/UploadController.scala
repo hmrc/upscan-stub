@@ -26,7 +26,7 @@ import play.api.mvc._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.upscanstub.model._
 import uk.gov.hmrc.upscanstub.service._
-import uk.gov.hmrc.upscanstub.util.ApplicativeHelpers
+import uk.gov.hmrc.upscanstub.util.{ApplicativeHelpers, Base64StringUtils}
 import uk.gov.hmrc.upscanstub.util.MultipartFormDataSummaries.{summariseDataParts, summariseFileParts}
 
 import java.net.URL
@@ -100,10 +100,8 @@ class UploadController @Inject()(
   )(
     block: => Result
   ): Result =
-    import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
-
     val maybeContentLengthCondition: Option[ContentLengthRange] =
-      ContentLengthRange.extract(form.policy.base64decode())
+      ContentLengthRange.extract(Base64StringUtils.base64decode(form.policy))
 
     val maybeInvalidContentLength: Option[AWSError] =
       maybeContentLengthCondition match
@@ -127,7 +125,7 @@ class UploadController @Inject()(
       case Some(awsError) => form.redirectAfterError match
                                case Some(url) => Redirect(url, queryParamsFor(form.key, awsError), 303)
                                case None      => BadRequest(invalidRequestBody(awsError.code, awsError.message))
-      case None => block
+      case None           => block
 
   private def checkFileSizeConstraints(
     fileSize: Long,
@@ -151,31 +149,31 @@ class UploadController @Inject()(
   private def storeAndNotify(
     form: UploadPostForm,
     file: MultipartFormData.FilePart[Files.TemporaryFile]
-  )(implicit
-    request: RequestHeader
+  )(using
+    RequestHeader
   ): Unit =
     val reference  = Reference(form.key)
     val fileId     = storageService.store(file.ref)
     val storedFile = storageService.get(fileId).getOrElse(throw IllegalStateException("The file should have been stored"))
 
     val fileData = maybeForcedTestFileError(file) match
-      case Some(ForcedTestFileErrorQuarantine(error)) =>
-        QuarantinedFile(
-          callbackUrl = new URL(form.callbackUrl),
+      case Some(ForcedTestFileError.Quarantine(error)) =>
+        ProcessedFile.QuarantinedFile(
+          callbackUrl = URL(form.callbackUrl),
           reference   = reference,
           error       = error
         )
 
-      case Some(ForcedTestFileErrorRejected(error)) =>
-        RejectedFile(
-          callbackUrl = new URL(form.callbackUrl),
+      case Some(ForcedTestFileError.Rejected(error)) =>
+        ProcessedFile.RejectedFile(
+          callbackUrl = URL(form.callbackUrl),
           reference   = reference,
           error       = error
         )
 
-      case Some(ForcedTestFileErrorUnknown(error)) =>
-        UnknownReasonFile(
-          callbackUrl = new URL(form.callbackUrl),
+      case Some(ForcedTestFileError.Unknown(error)) =>
+        ProcessedFile.UnknownReasonFile(
+          callbackUrl = URL(form.callbackUrl),
           reference   = reference,
           error       = error
         )
@@ -183,12 +181,12 @@ class UploadController @Inject()(
       case None =>
         val foundVirus: ScanningResult =
           if file.filename.startsWith("infected.") then
-            VirusFound(file.filename.drop(9).takeWhile(_ != '.'))
+            ScanningResult.VirusFound(file.filename.drop(9).takeWhile(_ != '.'))
           else
             virusScanner.checkIfClean(storedFile)
 
         foundVirus match
-          case Clean =>
+          case ScanningResult.Clean =>
             val fileUploadDetails = UploadDetails(
               clock.instant(),
               generateChecksum(storedFile.body),
@@ -196,15 +194,15 @@ class UploadController @Inject()(
               file.filename,
               file.fileSize
             )
-            UploadedFile(
-              callbackUrl   = new URL(form.callbackUrl),
+            ProcessedFile.UploadedFile(
+              callbackUrl   = URL(form.callbackUrl),
               reference     = reference,
-              downloadUrl   = new URL(buildDownloadUrl(fileId = fileId)),
+              downloadUrl   = URL(buildDownloadUrl(fileId = fileId)),
               uploadDetails = fileUploadDetails
             )
-          case VirusFound(details) =>
-            QuarantinedFile(
-              callbackUrl = new URL(form.callbackUrl),
+          case ScanningResult.VirusFound(details) =>
+            ProcessedFile.QuarantinedFile(
+              callbackUrl = URL(form.callbackUrl),
               reference   = reference,
               error       = details
             )
@@ -223,7 +221,7 @@ class UploadController @Inject()(
       case "ods"  => "application/vnd.oasis.opendocument.spreadsheet"
       case _      => s"application/binary"
 
-  private def buildDownloadUrl(fileId: FileId)(implicit request: RequestHeader) =
+  private def buildDownloadUrl(fileId: FileId)(using RequestHeader) =
     routes.DownloadController.download(fileId.value).absoluteURL()
 
   private def invalidRequestBody(code: String, message: String): Node =
@@ -252,9 +250,9 @@ class UploadController @Inject()(
   ): Option[ForcedTestFileError] =
     val name = file.filename
     name.takeWhile(_ != '.') match
-      case "infected" => Some(ForcedTestFileErrorQuarantine(name.drop(9).takeWhile(_ != '.')))
-      case "invalid"  => Some(ForcedTestFileErrorRejected  (name.drop(8).takeWhile(_ != '.')))
-      case "unknown"  => Some(ForcedTestFileErrorUnknown   (name.drop(8).takeWhile(_ != '.')))
+      case "infected" => Some(ForcedTestFileError.Quarantine(name.drop(9).takeWhile(_ != '.')))
+      case "invalid"  => Some(ForcedTestFileError.Rejected  (name.drop(8).takeWhile(_ != '.')))
+      case "unknown"  => Some(ForcedTestFileError.Unknown   (name.drop(8).takeWhile(_ != '.')))
       case _          => None
 
 end UploadController

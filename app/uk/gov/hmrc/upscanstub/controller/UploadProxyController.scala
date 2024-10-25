@@ -43,8 +43,8 @@ import scala.xml.Elem
 class UploadProxyController @Inject()(
   wsClient: WSClient,
   cc      : ControllerComponents
-)(implicit
-  ec: ExecutionContext
+)(using
+  ExecutionContext
 ) extends BackendController(cc):
 
   import UploadProxyController._
@@ -98,8 +98,8 @@ class UploadProxyController @Inject()(
   private def proxyRequest(
     errorAction: ErrorAction,
     body: Source[MultipartFormData.Part[Source[ByteString, _]], _]
-  )(implicit
-    request: RequestHeader
+  )(using
+    RequestHeader
   ): Future[Result] =
     for
       response <- wsClient
@@ -268,6 +268,6 @@ private object UploadProxyController:
   end ErrorResponseHandler
 
   def asTuples(values: Map[String, Seq[String]]): Seq[(String, String)] =
-    values.toList.flatMap { case (h, v) => v.map((h, _)) }
+    values.toList.flatMap { (h, v) => v.map((h, _)) }
 
 end UploadProxyController

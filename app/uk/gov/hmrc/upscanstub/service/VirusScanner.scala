@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.upscanstub.service
 
-sealed trait ScanningResult
-case object Clean extends ScanningResult
-case class VirusFound(details: String) extends ScanningResult
+enum ScanningResult:
+  case Clean                       extends ScanningResult
+  case VirusFound(details: String) extends ScanningResult
 
 class VirusScanner:
 
@@ -27,6 +27,6 @@ class VirusScanner:
 
   def checkIfClean(file: StoredFile): ScanningResult =
     if file.body.containsSlice(eicarSignature.getBytes) then
-      VirusFound("Eicar-Test-Signature")
+      ScanningResult.VirusFound("Eicar-Test-Signature")
     else
-      Clean
+      ScanningResult.Clean

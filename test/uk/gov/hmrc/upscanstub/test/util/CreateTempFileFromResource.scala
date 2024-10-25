@@ -28,5 +28,5 @@ object CreateTempFileFromResource:
     assert(testResource != null, s"Resource $path not found")
 
     val tempFile = SingletonTemporaryFileCreator.create("file", "tmp")
-    IOUtils.copy(testResource, new FileOutputStream(tempFile))
+    IOUtils.copy(testResource, FileOutputStream(tempFile))
     tempFile

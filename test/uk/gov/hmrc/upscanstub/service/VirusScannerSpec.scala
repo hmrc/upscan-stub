@@ -25,12 +25,12 @@ class VirusScannerSpec extends AnyWordSpec with Matchers:
     "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
 
   "Virus scanner" should:
-    val virusScanner = new VirusScanner
+    val virusScanner = VirusScanner()
 
     "treat file without EICAR signature as clean" in:
       val storedFile = StoredFile("TEST FILE".getBytes)
-      virusScanner.checkIfClean(storedFile) shouldBe Clean
+      virusScanner.checkIfClean(storedFile) shouldBe ScanningResult.Clean
 
     "detect EICAR test signature as a virus" in:
       val storedFile = StoredFile(s"BEFORE $eicarSignature AFTER".getBytes)
-      virusScanner.checkIfClean(storedFile) shouldBe VirusFound("Eicar-Test-Signature")
+      virusScanner.checkIfClean(storedFile) shouldBe ScanningResult.VirusFound("Eicar-Test-Signature")

@@ -18,12 +18,13 @@ package uk.gov.hmrc.upscanstub.service
 
 import org.apache.pekko.actor.ActorSystem
 import com.github.tomakehurst.wiremock.client.WireMock._
-import org.scalatest.concurrent.Eventually
+import org.scalatest.{BeforeAndAfterAll, GivenWhenThen}
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.{BeforeAndAfterAll, GivenWhenThen}
 import play.api.http.HeaderNames.USER_AGENT
+import play.api.http.Writeable
 import play.api.inject.bind
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFile}
@@ -48,18 +49,19 @@ class NotificationSenderISpec
      with WireMockSupport
      with BeforeAndAfterAll
      with GivenWhenThen
-     with Eventually:
+     with Eventually
+     with IntegrationPatience:
 
-  implicit override val patienceConfig =
-    PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(300, Millis)))
+  given ActorSystem = ActorSystem()
 
-  implicit val actorSystem: ActorSystem = ActorSystem()
+  given Writeable[MultipartFormData[TemporaryFile]] = MultipartFormDataWritable.writeable
 
   val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
-  lazy val fakeApplication: Application = new GuiceApplicationBuilder()
-    .overrides(bind[Clock].to[NotificationSenderClock])
-    .build()
+  lazy val fakeApplication: Application =
+    GuiceApplicationBuilder()
+      .overrides(bind[Clock].to[NotificationSenderClock])
+      .build()
 
   override def beforeAll(): Unit =
     super.beforeAll()
@@ -108,15 +110,16 @@ class NotificationSenderISpec
       Files.write(file.toPath, fileContents)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "my-it-file.pdf", None, file)
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = formFields,
-        files     = Seq(filePart),
-        badParts  = Nil
-      )
+        MultipartFormData.FilePart[TemporaryFile]("file", "my-it-file.pdf", None, file)
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = formFields,
+          files     = Seq(filePart),
+          badParts  = Nil
+        )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -191,16 +194,16 @@ class NotificationSenderISpec
       Files.write(file.toPath, infectedContents.getBytes)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "my-infected-file", None, file)
+        MultipartFormData.FilePart[TemporaryFile]("file", "my-infected-file", None, file)
 
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = formFields,
-        files     = Seq(filePart),
-        badParts  = Nil
-      )
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = formFields,
+          files     = Seq(filePart),
+          badParts  = Nil
+        )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -260,15 +263,16 @@ class NotificationSenderISpec
       Files.write(file.toPath, content.getBytes)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "infected.MyDoom.txt", None, file)
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = formFields,
-        files     = Seq(filePart),
-        badParts  = Nil
-      )
+        MultipartFormData.FilePart[TemporaryFile]("file", "infected.MyDoom.txt", None, file)
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = formFields,
+          files     = Seq(filePart),
+          badParts  = Nil
+        )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -328,16 +332,16 @@ class NotificationSenderISpec
       Files.write(file.toPath, content.getBytes)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "invalid.ZipInDisguise.txt", None, file)
+        MultipartFormData.FilePart[TemporaryFile]("file", "invalid.ZipInDisguise.txt", None, file)
 
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = formFields,
-        files     = Seq(filePart),
-        badParts  = Nil
-      )
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = formFields,
+          files     = Seq(filePart),
+          badParts  = Nil
+        )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 
@@ -397,15 +401,16 @@ class NotificationSenderISpec
       Files.write(file.toPath, content.getBytes)
 
       val filePart =
-        new MultipartFormData.FilePart[TemporaryFile]("file", "unknown.Foo.jpeg", None, file)
-      val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
-        dataParts = formFields,
-        files     = Seq(filePart),
-        badParts  = Nil
-      )
+        MultipartFormData.FilePart[TemporaryFile]("file", "unknown.Foo.jpeg", None, file)
+
+      val postBodyForm: MultipartFormData[TemporaryFile] =
+        MultipartFormData[TemporaryFile](
+          dataParts = formFields,
+          files     = Seq(filePart),
+          badParts  = Nil
+        )
 
       val uploadRequest   = FakeRequest(Helpers.POST, uploadUrl, FakeHeaders(), postBodyForm)
-      implicit val writer = MultipartFormDataWritable.writeable
       val uploadResponse  = route(fakeApplication, uploadRequest).get
       status(uploadResponse) shouldBe 204
 

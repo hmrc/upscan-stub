@@ -25,6 +25,5 @@ case class PrepareUploadResponse(
 )
 
 object PrepareUploadResponse:
-
-  implicit val format: Format[PrepareUploadResponse] =
+  val format: Format[PrepareUploadResponse] =
     Json.format[PrepareUploadResponse]

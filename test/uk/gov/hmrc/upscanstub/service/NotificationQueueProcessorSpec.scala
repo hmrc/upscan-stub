@@ -18,10 +18,10 @@ package uk.gov.hmrc.upscanstub.service
 
 import org.apache.pekko.actor.ActorSystem
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.hmrc.upscanstub.model.{ProcessedFile, Reference, UploadDetails, UploadedFile}
+import uk.gov.hmrc.upscanstub.model.{ProcessedFile, Reference, UploadDetails}
 
 import java.net.URL
 import java.time.Instant
@@ -33,14 +33,10 @@ class NotificationQueueProcessorSpec
   extends AnyWordSpec
      with Matchers
      with BeforeAndAfterAll
-     with Eventually:
+     with Eventually
+     with IntegrationPatience:
 
-  implicit val actorSystem: ActorSystem = ActorSystem("test")
-
-  override implicit val patienceConfig: PatienceConfig = PatienceConfig(
-    timeout  = scaled(5.seconds),
-    interval = scaled(100.millis)
-  )
+  given actorSystem: ActorSystem = ActorSystem("test")
 
   override def afterAll(): Unit =
     actorSystem.terminate()
@@ -49,45 +45,45 @@ class NotificationQueueProcessorSpec
 
   class NotificationSenderStub(val expectedFailures: Int) extends NotificationSender:
 
-    val callCounter = new AtomicInteger(0)
+    val callCounter = AtomicInteger(0)
 
-    val successfulNotifications = new AtomicReference(Seq[(Reference, ProcessedFile)]())
+    val successfulNotifications = AtomicReference(Seq[(Reference, ProcessedFile)]())
 
     override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
       if callCounter.incrementAndGet() > expectedFailures then
         successfulNotifications.updateAndGet(_ :+ (uploadedFile.reference -> uploadedFile))
         Future.successful(())
       else
-        Future.failed(new Exception("Expected exception"))
+        Future.failed(Exception("Expected exception"))
 
   "NotificationQueueProcessor" should:
     "process notifications in the order of enqueueing" in:
 
-      val notificationService = new NotificationSenderStub(0)
+      val notificationService = NotificationSenderStub(0)
 
-      val processor = new NotificationQueueProcessor(notificationService)
+      val processor = NotificationQueueProcessor(notificationService)
 
       val file1 =
-        UploadedFile(
-          new URL("http://127.0.0.1/callback"),
+        ProcessedFile.UploadedFile(
           Reference("REF1"),
-          new URL("http://127.0.0.1/download"),
+          URL("http://127.0.0.1/callback"),
+          URL("http://127.0.0.1/download"),
           UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 123L)
         )
 
       val file2 =
-        UploadedFile(
-          new URL("http://127.0.0.1/callback"),
+        ProcessedFile.UploadedFile(
           Reference("REF2"),
-          new URL("http://127.0.0.1/download"),
+          URL("http://127.0.0.1/callback"),
+          URL("http://127.0.0.1/download"),
           UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 456L)
         )
 
       val file3 =
-        UploadedFile(
-          new URL("http://127.0.0.1/callback"),
+        ProcessedFile.UploadedFile(
           Reference("REF3"),
-          new URL("http://127.0.0.1/download"),
+          URL("http://127.0.0.1/callback"),
+          URL("http://127.0.0.1/download"),
           UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 789L)
         )
 
@@ -101,16 +97,16 @@ class NotificationQueueProcessorSpec
       notificationService.successfulNotifications.get.map(_._2) should contain theSameElementsInOrderAs Seq(file1, file2, file3)
 
     "retry notification if failed" in:
-      val notificationService = new NotificationSenderStub(expectedFailures = 2)
+      val notificationService = NotificationSenderStub(expectedFailures = 2)
 
       val processor =
-        new NotificationQueueProcessor(notificationService, retryDelay = 30.milliseconds, maximumRetryCount = 2)
+        NotificationQueueProcessor(notificationService, retryDelay = 30.milliseconds, maximumRetryCount = 2)
 
       val file =
-        UploadedFile(
-          new URL("http://callback"),
+        ProcessedFile.UploadedFile(
           Reference("REF1"),
-          new URL("http://download"),
+          URL("http://callback"),
+          URL("http://download"),
           UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 123L)
         )
 
@@ -120,16 +116,16 @@ class NotificationQueueProcessorSpec
         notificationService.successfulNotifications.get.map(_._2) should contain(file)
 
     "fail permanently after certain amount of retries" in:
-      val notificationService = new NotificationSenderStub(expectedFailures = 3)
+      val notificationService = NotificationSenderStub(expectedFailures = 3)
 
       val processor =
-        new NotificationQueueProcessor(notificationService, retryDelay = 100.milliseconds, maximumRetryCount = 2)
+        NotificationQueueProcessor(notificationService, retryDelay = 100.milliseconds, maximumRetryCount = 2)
 
       val file =
-        UploadedFile(
-          new URL("http://callback"),
+        ProcessedFile.UploadedFile(
           Reference("REF1"),
-          new URL("http://download"),
+          URL("http://callback"),
+          URL("http://download"),
           UploadDetails(initiateDate, checksum = "12345", "applicaiton/pdf", "test.pdf", size = 123L)
         )
 

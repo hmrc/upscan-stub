@@ -18,14 +18,11 @@ package uk.gov.hmrc.upscanstub.util
 
 import java.util.Base64
 
-// TODO just use helpers
-object Implicits:
+object Base64StringUtils:
 
-  implicit class Base64StringOps(input: String):
+  def base64encode(input: String): String =
+    val encodedBytes = Base64.getEncoder.encode(input.getBytes("UTF-8"))
+    String(encodedBytes).replaceAll(System.lineSeparator, "")
 
-    def base64encode(): String =
-      val encodedBytes = Base64.getEncoder.encode(input.getBytes("UTF-8"))
-      new String(encodedBytes).replaceAll(System.lineSeparator, "")
-
-    def base64decode(): String =
-      new String(Base64.getDecoder.decode(input))
+  def base64decode(input: String): String =
+    String(Base64.getDecoder.decode(input))

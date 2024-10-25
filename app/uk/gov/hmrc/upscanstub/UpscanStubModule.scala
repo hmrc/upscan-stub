@@ -34,9 +34,9 @@ class UpscanStubModule extends Module:
 
 class NotificationQueueProcessorProvider @Inject()(
   notificationService: NotificationSender
-)(
+)(using
   actorSystem: ActorSystem
 ) extends Provider[NotificationQueueProcessor]:
 
   override def get(): NotificationQueueProcessor =
-    new NotificationQueueProcessor(notificationService)(actorSystem)
+    NotificationQueueProcessor(notificationService)

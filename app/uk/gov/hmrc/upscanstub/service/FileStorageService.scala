@@ -50,4 +50,4 @@ class FileStorageService:
       StoredFile(FileUtils.readFileToByteArray(file))
 
   private def buildFileLocation(reference: FileId) =
-    new File(tempDirectory, reference.value)
+    File(tempDirectory, reference.value)
