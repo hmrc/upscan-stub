@@ -20,20 +20,16 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.hmrc.upscanstub.util.ApplicativeHelpers
 
-class ApplicativeHelpersSpec extends AnyWordSpec with Matchers {
+class ApplicativeHelpersSpec extends AnyWordSpec with Matchers:
   import ApplicativeHelpers._
 
-  "product function" should {
-    "allow to combine two right Either values into tuple" in {
+  "product function" should:
+    "allow to combine two right Either values into tuple" in:
       product(Right("VAL1"), Right("VAL2")) shouldBe Right("VAL1" -> "VAL2")
-    }
-    "collect errors for two left Eithers" in {
+
+    "collect errors for two left Eithers" in:
       product(Left(Seq("ERR1", "ERR1B")), Left(Seq("ERR2"))) shouldBe Left(Seq("ERR1", "ERR1B", "ERR2"))
-    }
-    "collect errors if only one of Eithers is has left value" in {
+
+    "collect errors if only one of Eithers is has left value" in:
       product(Right("VAL1"), Left(Seq("ERR2")))          shouldBe Left(Seq("ERR2"))
       product(Left(Seq("ERR1", "ERR1B")), Right("VAL2")) shouldBe Left(Seq("ERR1", "ERR1B"))
-    }
-  }
-
-}

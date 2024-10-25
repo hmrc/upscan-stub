@@ -19,14 +19,13 @@ package uk.gov.hmrc.upscanstub.util
 import play.api.libs.Files.TemporaryFile
 import play.api.mvc.MultipartFormData.FilePart
 
-object MultipartFormDataSummaries {
+object MultipartFormDataSummaries:
   def summariseDataParts(dataParts: Map[String, Seq[String]]): String =
-    dataParts.map { case (key, values) =>
-      s"""$key=${values.mkString("[", ",", "]")}"""
-    }.mkString("{", ",", "}")
+    dataParts
+      .map((key, values) => s"""$key=${values.mkString("[", ",", "]")}""")
+      .mkString("{", ",", "}")
 
   def summariseFileParts(fileParts: Seq[FilePart[TemporaryFile]]): String =
-    fileParts.map { fp =>
-      s"FilePart(key=${fp.key}, filename=${fp.filename}, contentType=${fp.contentType}, fileSize=${fp.fileSize}"
-    }.mkString("[", ",", "]")
-}
+    fileParts
+      .map(fp => s"FilePart(key=${fp.key}, filename=${fp.filename}, contentType=${fp.contentType}, fileSize=${fp.fileSize}")
+      .mkString("[", ",", "]")

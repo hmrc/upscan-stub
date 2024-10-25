@@ -18,7 +18,7 @@ package uk.gov.hmrc.upscanstub.controller
 
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json, _}
-import play.api.mvc.{Action, Call, ControllerComponents, Result}
+import play.api.mvc.{Action, Call, ControllerComponents, Request, Result}
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.upscanstub.filter.UserAgentFilter
 import uk.gov.hmrc.upscanstub.model.initiate._
@@ -29,9 +29,11 @@ import javax.inject.Inject
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-class InitiateController @Inject()(prepareUploadService: PrepareUploadService, cc: ControllerComponents)
-    extends BackendController(cc)
-    with UserAgentFilter {
+class InitiateController @Inject()(
+  prepareUploadService: PrepareUploadService,
+  cc                  : ControllerComponents
+) extends BackendController(cc)
+     with UserAgentFilter:
 
   private val logger = Logger(this.getClass)
 
@@ -50,10 +52,11 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
     prepareUpload(routes.UploadProxyController.upload)(prepareUploadRequestReadsV2)
 
   private def prepareUpload(uploadCall: Call)(implicit reads: Reads[PrepareUploadRequest]): Action[JsValue] =
-    withUserAgentHeader(logger, cc.actionBuilder) {
-      Action.async(parse.json) { implicit request =>
-        withJsonBody[PrepareUploadRequest] { prepareUploadRequest =>
-          withAllowedCallbackProtocol(prepareUploadRequest.callbackUrl) {
+    withUserAgentHeader(logger, cc.actionBuilder):
+      Action.async(parse.json): request =>
+        given Request[JsValue] = request
+        withJsonBody[PrepareUploadRequest]: prepareUploadRequest =>
+          withAllowedCallbackProtocol(prepareUploadRequest.callbackUrl):
             val userAgent = request.headers.get(USER_AGENT).get
             logger.debug(s"Received initiate request: [$prepareUploadRequest] from [$userAgent].")
 
@@ -67,32 +70,22 @@ class InitiateController @Inject()(prepareUploadService: PrepareUploadService, c
             val result = prepareUploadService.prepareUpload(settings)
             logger.debug(s"Prepared initiate upload response with Key=[${result.reference.value}]")
             Future.successful(Ok(Json.toJson(result)(PrepareUploadResponse.format)))
-          }
-        }
-      }
-    }
 
-  private[controller] def withAllowedCallbackProtocol[A](callbackUrl: String)(
-    block: => Future[Result]): Future[Result] = {
+  private[controller] def withAllowedCallbackProtocol[A](
+    callbackUrl: String
+  )(
+    block: => Future[Result]
+  ): Future[Result] =
+    val isHttps: Try[Boolean] =
+      Try:
+        URL(callbackUrl).getProtocol == "https"
+          || callbackUrl.startsWith("http://localhost")
 
-    val isHttps: Try[Boolean] = Try {
-      val url = new URL(callbackUrl)
-      url.getProtocol == "https" || callbackUrl.startsWith("http://localhost")
-    }
+    isHttps match
+      case Success(true)  => block
+      case Success(false) => logger.warn(s"Invalid callback url protocol: [$callbackUrl].")
+                             Future.successful(BadRequest(s"Invalid callback url protocol: [$callbackUrl]. Protocol must be https."))
+      case Failure(e)     => logger.warn(s"Invalid callback url format: [$callbackUrl].")
+                             Future.successful(BadRequest(s"Invalid callback url format: [$callbackUrl]. [${e.getMessage}]"))
 
-    isHttps match {
-      case Success(true) => block
-      case Success(false) => {
-        logger.warn(s"Invalid callback url protocol: [$callbackUrl].")
-
-        Future.successful(BadRequest(s"Invalid callback url protocol: [$callbackUrl]. Protocol must be https."))
-      }
-      case Failure(e) => {
-        logger.warn(s"Invalid callback url format: [$callbackUrl].")
-
-        Future.successful(BadRequest(s"Invalid callback url format: [$callbackUrl]. [${e.getMessage}]"))
-      }
-    }
-
-  }
-}
+end InitiateController

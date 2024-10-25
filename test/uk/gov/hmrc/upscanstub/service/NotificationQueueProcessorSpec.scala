@@ -29,7 +29,11 @@ import java.util.concurrent.atomic.{AtomicInteger, AtomicReference}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with BeforeAndAfterAll with Eventually {
+class NotificationQueueProcessorSpec
+  extends AnyWordSpec
+     with Matchers
+     with BeforeAndAfterAll
+     with Eventually:
 
   implicit val actorSystem: ActorSystem = ActorSystem("test")
 
@@ -43,23 +47,21 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
 
   private val initiateDate = Instant.parse("2018-04-24T09:30:00Z")
 
-  class NotificationSenderStub(val expectedFailures: Int) extends NotificationSender {
+  class NotificationSenderStub(val expectedFailures: Int) extends NotificationSender:
 
     val callCounter = new AtomicInteger(0)
 
     val successfulNotifications = new AtomicReference(Seq[(Reference, ProcessedFile)]())
 
     override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
-      if (callCounter.incrementAndGet() > expectedFailures) {
+      if callCounter.incrementAndGet() > expectedFailures then
         successfulNotifications.updateAndGet(_ :+ (uploadedFile.reference -> uploadedFile))
         Future.successful(())
-      } else {
+      else
         Future.failed(new Exception("Expected exception"))
-      }
-  }
 
-  "NotificationQueueProcessor" should {
-    "process notifications in the order of enqueueing" in {
+  "NotificationQueueProcessor" should:
+    "process notifications in the order of enqueueing" in:
 
       val notificationService = new NotificationSenderStub(0)
 
@@ -72,6 +74,7 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
           new URL("http://127.0.0.1/download"),
           UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 123L)
         )
+
       val file2 =
         UploadedFile(
           new URL("http://127.0.0.1/callback"),
@@ -79,6 +82,7 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
           new URL("http://127.0.0.1/download"),
           UploadDetails(initiateDate, checksum = "12345", "application/pdf", "test.pdf", size = 456L)
         )
+
       val file3 =
         UploadedFile(
           new URL("http://127.0.0.1/callback"),
@@ -91,15 +95,12 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
       processor.enqueueNotification(file2)
       processor.enqueueNotification(file3)
 
-      eventually {
+      eventually:
         notificationService.successfulNotifications.get.size shouldBe 3
-      }
 
       notificationService.successfulNotifications.get.map(_._2) should contain theSameElementsInOrderAs Seq(file1, file2, file3)
 
-    }
-
-    "retry notification if failed" in {
+    "retry notification if failed" in:
       val notificationService = new NotificationSenderStub(expectedFailures = 2)
 
       val processor =
@@ -115,12 +116,10 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
 
       processor.enqueueNotification(file)
 
-      eventually {
+      eventually:
         notificationService.successfulNotifications.get.map(_._2) should contain(file)
-      }
-    }
 
-    "fail permanently after certain amount of retries" in {
+    "fail permanently after certain amount of retries" in:
       val notificationService = new NotificationSenderStub(expectedFailures = 3)
 
       val processor =
@@ -139,6 +138,3 @@ class NotificationQueueProcessorSpec extends AnyWordSpec with Matchers with Befo
       Thread.sleep(1000)
 
       notificationService.successfulNotifications.get shouldBe empty
-    }
-  }
-}

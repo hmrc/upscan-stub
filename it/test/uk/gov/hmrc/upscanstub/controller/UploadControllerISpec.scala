@@ -33,15 +33,17 @@ import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
 
 import scala.xml.{Elem, XML}
 
-class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen {
+class UploadControllerISpec
+  extends AnyWordSpec
+     with Matchers
+     with GuiceOneAppPerSuite
+     with GivenWhenThen:
 
-  implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: Materializer      = NoMaterializer
+  implicit val actorSystem: ActorSystem   = ActorSystem()
+  implicit val materializer: Materializer = NoMaterializer
 
-  "UploadController" should {
-
-    "return NoContent for valid upload request without redirect on success" in {
-
+  "UploadController" should:
+    "return NoContent for valid upload request without redirect on success" in:
       Given("a valid POST multipart form request containing a file")
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile](
@@ -72,10 +74,8 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
 
       Then("a NoContent response should be returned")
       status(uploadResponse) shouldBe 204
-    }
 
-    "return Redirect for valid upload request with redirect on success" in {
-
+    "return Redirect for valid upload request with redirect on success" in:
       Given("a valid POST multipart form request containing a file")
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile](
@@ -108,10 +108,8 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       Then("a NoContent response should be returned")
       status(uploadResponse)                           shouldBe 303
       await(uploadResponse).header.headers("Location") shouldBe "https://localhost"
-    }
 
-    "return Bad Request for invalid form upload request" in {
-
+    "return Bad Request for invalid form upload request" in:
       Given("a invalid POST multipart form request containing a file")
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile](
@@ -151,10 +149,8 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       (uploadBodyAsXml \\ "Message").head.text   shouldBe "FormError(x-amz-meta-callback-url,List(error.required),List())"
       (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
-    }
 
-    "return Bad Request for an upload request containing no file" in {
-
+    "return Bad Request for an upload request containing no file" in:
       Given("a valid POST multipart form request containing NO file")
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
@@ -189,9 +185,8 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       (uploadBodyAsXml \\ "Message").head.text   shouldBe "'file' field not found"
       (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
-    }
 
-    "return Bad Request when the uploaded file size is smaller than the minimum limit in the supplied policy" in {
+    "return Bad Request when the uploaded file size is smaller than the minimum limit in the supplied policy" in:
       Given("an invalid request containing invalid file size limits in the policy")
       val policy = policyWithContentLengthRange(100, 1000)
 
@@ -232,9 +227,8 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       (responseBodyAsXml \\ "Error").nonEmpty    shouldBe true
       (responseBodyAsXml \\ "Code").head.text    shouldBe "EntityTooSmall"
       (responseBodyAsXml \\ "Message").head.text shouldBe "Your proposed upload is smaller than the minimum allowed size"
-    }
 
-    "return Bad Request when the uploaded file size exceeds the maximum limit in the supplied policy" in {
+    "return Bad Request when the uploaded file size exceeds the maximum limit in the supplied policy" in:
       Given("an invalid request containing invalid file size limits in the policy")
       val policy = policyWithContentLengthRange(5, 10)
 
@@ -275,8 +269,6 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
       (responseBodyAsXml \\ "Error").nonEmpty    shouldBe true
       (responseBodyAsXml \\ "Code").head.text    shouldBe "EntityTooLarge"
       (responseBodyAsXml \\ "Message").head.text shouldBe "Your proposed upload exceeds the maximum allowed size"
-    }
-  }
 
   private def policyWithContentLengthRange(min: Long, max: Long): JsValue =
     Json.obj(
@@ -284,4 +276,3 @@ class UploadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPe
         Seq(Json.arr("content-length-range", min, max))
       )
     )
-}

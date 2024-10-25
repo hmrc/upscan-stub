@@ -28,22 +28,26 @@ import javax.inject.Singleton
 case class StoredFile(body: Array[Byte])
 
 @Singleton
-class FileStorageService {
+class FileStorageService:
 
   private val logger = Logger(this.getClass)
-  private val tempDirectory: File = Files.createTempDirectory("upscan").toFile
+
+  private val tempDirectory: File =
+    Files.createTempDirectory("upscan").toFile
 
   logger.debug(s"Storing files to temporary directory: [${tempDirectory}].")
 
-  def store(temporaryFile: PlayFiles.TemporaryFile): FileId = {
+  def store(temporaryFile: PlayFiles.TemporaryFile): FileId =
     val fileId = FileId.generate()
     temporaryFile.moveTo(buildFileLocation(fileId))
     fileId
-  }
 
   def get(fileId: FileId): Option[StoredFile] =
-    for { file <- Some(buildFileLocation(fileId)) if file.exists() && file.isFile && file.canRead } yield
+    for
+      file <- Some(buildFileLocation(fileId))
+      if file.exists() && file.isFile && file.canRead
+    yield
       StoredFile(FileUtils.readFileToByteArray(file))
 
-  private def buildFileLocation(reference: FileId) = new File(tempDirectory, reference.value)
-}
+  private def buildFileLocation(reference: FileId) =
+    new File(tempDirectory, reference.value)

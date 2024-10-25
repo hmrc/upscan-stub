@@ -16,13 +16,15 @@
 
 package uk.gov.hmrc.upscanstub.model.initiate
 
-import play.api.libs.json._
+import play.api.libs.json.{Format, Json}
 import uk.gov.hmrc.upscanstub.model.Reference
 
-case class PrepareUploadResponse(reference: Reference, uploadRequest: UploadFormTemplate)
+case class PrepareUploadResponse(
+  reference    : Reference,
+  uploadRequest: UploadFormTemplate
+)
 
-object PrepareUploadResponse {
+object PrepareUploadResponse:
 
-  implicit val format: OFormat[PrepareUploadResponse] = Json.format[PrepareUploadResponse]
-
-}
+  implicit val format: Format[PrepareUploadResponse] =
+    Json.format[PrepareUploadResponse]

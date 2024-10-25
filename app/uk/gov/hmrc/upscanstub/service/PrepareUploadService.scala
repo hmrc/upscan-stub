@@ -27,23 +27,25 @@ import java.time.{Instant, ZoneOffset}
 import java.util.UUID.randomUUID
 import javax.inject.Inject
 
-class PrepareUploadService @Inject()() {
-  private val dateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC)
+class PrepareUploadService @Inject()():
+  private val dateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC)
 
-  case class Policy(json: JsObject) {
-    import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
-    def asBase64String(): String = Json.stringify(json).base64encode()
-  }
+  case class Policy(json: JsObject):
 
-  def prepareUpload(settings: UploadSettings): PrepareUploadResponse = {
+    def asBase64String(): String =
+      import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
+      Json.stringify(json).base64encode()
+
+  def prepareUpload(settings: UploadSettings): PrepareUploadResponse =
     val reference = generateReference()
     val policy    = toPolicy(settings)
 
     val now = Instant.now
     PrepareUploadResponse(
-      reference = reference,
+      reference     = reference,
       uploadRequest = UploadFormTemplate(
-        href = settings.uploadUrl,
+        href   = settings.uploadUrl,
         fields = Map(
           "acl"                                 -> "private",
           "key"                                 -> reference.value,
@@ -63,37 +65,33 @@ class PrepareUploadService @Inject()() {
           ++ settings.prepareUploadRequest.errorRedirect.map("error_action_redirect"     -> _)
       )
     )
-  }
 
   private def successRedirectWithReference(successRedirect: String, reference: Reference): String =
-    try {
+    try
       val builder = new URIBuilder(successRedirect)
       builder.addParameter("key", reference.value)
       builder.build().toASCIIString
-    } catch {
+    catch
       // retain existing behaviour and continue with an unadulterated (but invalid) successRedirect URL
       case _: URISyntaxException => successRedirect
-    }
 
-  private def generateReference(): Reference = Reference(randomUUID().toString)
+  private def generateReference(): Reference =
+    Reference(randomUUID().toString)
 
-  private def toPolicy(settings: UploadSettings): Policy = {
-    val json = Json.obj(
-      "conditions" -> JsArray(
-        Seq(
-          Json.arr(
-            "content-length-range",
-            settings.prepareUploadRequest.minimumFileSize.foldLeft(PrepareUploadService.minFileSize)(math.max),
-            settings.prepareUploadRequest.maximumFileSize.foldLeft(PrepareUploadService.maxFileSize)(math.min)
+  private def toPolicy(settings: UploadSettings): Policy =
+    Policy:
+      Json.obj(
+        "conditions" -> JsArray(
+          Seq(
+            Json.arr(
+              "content-length-range",
+              settings.prepareUploadRequest.minimumFileSize.foldLeft(PrepareUploadService.minFileSize)(math.max),
+              settings.prepareUploadRequest.maximumFileSize.foldLeft(PrepareUploadService.maxFileSize)(math.min)
+            )
           )
         )
       )
-    )
-    Policy(json)
-  }
-}
 
-object PrepareUploadService {
+object PrepareUploadService:
   val minFileSize = 0L
   val maxFileSize = 104857600L
-}

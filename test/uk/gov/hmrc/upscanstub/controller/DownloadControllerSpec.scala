@@ -32,13 +32,17 @@ import uk.gov.hmrc.upscanstub.service.{FileStorageService, StoredFile}
 
 import scala.concurrent.Future
 
-class DownloadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
+class DownloadControllerSpec
+   extends AnyWordSpec
+      with Matchers
+      with GivenWhenThen
+      with MockitoSugar:
 
-  implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: Materializer      = NoMaterializer
+  implicit val actorSystem: ActorSystem   = ActorSystem()
+  implicit val materializer: Materializer = NoMaterializer
 
-  "DownloadController" should {
-    "retrieve file from storage if available" in {
+  "DownloadController" should:
+    "retrieve file from storage if available" in:
       Given("a valid file reference")
       val validFileId = "123-efg-789-0"
       val storedFile  = Some(StoredFile("Here is some file contents".getBytes))
@@ -58,9 +62,8 @@ class DownloadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
       And("the body should be set to the expected file contents")
       val downloadBody: String =  contentAsString(downloadResult)
       downloadBody shouldBe "Here is some file contents"
-    }
 
-    "return Not Found if file not available" in {
+    "return Not Found if file not available" in:
       Given("an valid file reference")
       val validFileId = "123-efg-789-0"
       val storedFile  = None
@@ -76,7 +79,3 @@ class DownloadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThe
       Then("a Not Found response should be returned")
       val downloadStatus = status(downloadResult)
       downloadStatus shouldBe 404
-    }
-  }
-
-}

@@ -23,15 +23,17 @@ import play.api.mvc.{Action, ActionBuilder, AnyContent, Request}
 
 import scala.concurrent.Future
 
-trait UserAgentFilter {
+trait UserAgentFilter:
 
-  def withUserAgentHeader[A](logger: Logger, actionBuilder: ActionBuilder[Request, AnyContent])
-                            (action: Action[A]): Action[A] = actionBuilder.async(action.parser) { request =>
-    if (request.headers.get(USER_AGENT).isDefined) {
-      action(request)
-    } else {
-      logger.warn(s"Missing $USER_AGENT Header.")
-      Future.successful(BadRequest(s"Missing $USER_AGENT Header"))
-    }
-  }
-}
+  def withUserAgentHeader[A](
+    logger       : Logger,
+    actionBuilder: ActionBuilder[Request, AnyContent]
+  )(
+    action: Action[A]
+  ): Action[A] =
+    actionBuilder.async(action.parser): request =>
+      if request.headers.get(USER_AGENT).isDefined then
+        action(request)
+      else
+        logger.warn(s"Missing $USER_AGENT Header.")
+        Future.successful(BadRequest(s"Missing $USER_AGENT Header"))

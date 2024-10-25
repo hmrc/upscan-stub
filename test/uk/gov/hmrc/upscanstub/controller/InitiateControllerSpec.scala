@@ -39,7 +39,7 @@ class InitiateControllerSpec
   extends AnyWordSpec
      with Matchers
      with GivenWhenThen
-     with MockitoSugar {
+     with MockitoSugar:
 
   import InitiateControllerSpec._
 
@@ -47,7 +47,7 @@ class InitiateControllerSpec
 
   private val requestHeaders = (USER_AGENT, UserAgent)
 
-  "Upscan Initiate V1 with only mandatory form fields" should {
+  "Upscan Initiate V1 with only mandatory form fields" should:
     val uploadSettingsMatcher: UploadSettings => Boolean =
       settings =>
         settings.uploadUrl.endsWith("/upload") &&
@@ -61,15 +61,14 @@ class InitiateControllerSpec
         settings.consumingService == UserAgent
 
     behave like upscanInitiateTests(_.prepareUploadV1(), uploadSettingsMatcher)
-  }
 
-  "Upscan Initiate V1 with all form fields" should {
+  "Upscan Initiate V1 with all form fields" should:
     val optionalFields = Json.obj(
-      "minimumFileSize"  -> 0,
-      "maximumFileSize"  -> 1024,
+      "minimumFileSize"     -> 0,
+      "maximumFileSize"     -> 1024,
       "expectedContentType" -> XML,
-      "successRedirect" -> SuccessRedirectUrl,
-      "consumingService" -> ConsumingService
+      "successRedirect"     -> SuccessRedirectUrl,
+      "consumingService"    -> ConsumingService
     )
 
     val uploadSettingsMatcher: UploadSettings => Boolean =
@@ -85,9 +84,8 @@ class InitiateControllerSpec
         settings.consumingService == ConsumingService
 
     behave like upscanInitiateTests(_.prepareUploadV1(), uploadSettingsMatcher, optionalFields)
-  }
 
-  "Upscan Initiate V2 with only mandatory form fields" should {
+  "Upscan Initiate V2 with only mandatory form fields" should:
     val uploadSettingsMatcher: UploadSettings => Boolean =
       settings =>
         settings.uploadUrl.endsWith("/upload-proxy") &&
@@ -101,16 +99,15 @@ class InitiateControllerSpec
         settings.consumingService == UserAgent
 
     behave like upscanInitiateTests(_.prepareUploadV2(), uploadSettingsMatcher)
-  }
 
-  "Upscan Initiate V2 with all form fields" should {
+  "Upscan Initiate V2 with all form fields" should:
     val extraRequestFields = Json.obj(
-      "errorRedirect" -> ErrorRedirectUrl,
-      "minimumFileSize"  -> 0,
-      "maximumFileSize"  -> 1024,
+      "errorRedirect"       -> ErrorRedirectUrl,
+      "minimumFileSize"     -> 0,
+      "maximumFileSize"     -> 1024,
       "expectedContentType" -> XML,
-      "successRedirect" -> SuccessRedirectUrl,
-      "consumingService" -> ConsumingService
+      "successRedirect"     -> SuccessRedirectUrl,
+      "consumingService"    -> ConsumingService
     )
     val uploadSettingsMatcher: UploadSettings => Boolean =
       settings =>
@@ -125,16 +122,14 @@ class InitiateControllerSpec
         settings.consumingService == ConsumingService
 
     behave like upscanInitiateTests(_.prepareUploadV2(), uploadSettingsMatcher, extraRequestFields)
-  }
 
   private def upscanInitiateTests(
     // scalastyle:ignore
     route                : InitiateController => Action[JsValue],
     uploadSettingsMatcher: UploadSettings => Boolean,
     extraRequestFields   : JsObject = JsObject.empty
-  ): Unit = {
-
-    "return expected JSON for prepare upload when passed valid request" in {
+  ): Unit =
+    "return expected JSON for prepare upload when passed valid request" in:
       Given("a request containing a valid JSON body")
       val validJsonBody = Json.obj("callbackUrl" -> CallbackUrl) ++ extraRequestFields
       val request = FakeRequest().withHeaders(requestHeaders).withBody(validJsonBody)
@@ -164,9 +159,8 @@ class InitiateControllerSpec
           "fields" -> Json.obj()
         )
       )
-    }
 
-    "return expected error for prepare upload when passed invalid JSON request" in {
+    "return expected error for prepare upload when passed invalid JSON request" in:
       Given("a request containing an invalid JSON body")
       val invalidJsonBody = Json.parse("""
           |{
@@ -183,9 +177,8 @@ class InitiateControllerSpec
 
       Then("a BadRequest response should be returned")
       status(result) shouldBe BAD_REQUEST
-    }
 
-    "return expected error for prepare upload when passed non-JSON request" in {
+    "return expected error for prepare upload when passed non-JSON request" in:
       Given("a request containing an invalid JSON body")
       val invalidStringBody = "This is an invalid body"
       val request = FakeRequest().withHeaders(requestHeaders).withBody(invalidStringBody)
@@ -197,46 +190,40 @@ class InitiateControllerSpec
 
       Then("an Unsupported Media Type response should be returned")
       status(result) shouldBe UNSUPPORTED_MEDIA_TYPE
-    }
 
-    "allow https callback urls" in {
+    "allow https callback urls" in:
       val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())
 
-      val result = controller.withAllowedCallbackProtocol("https://my.callback.url") {
-        Future.successful(Ok)
-      }
+      val result =
+        controller.withAllowedCallbackProtocol("https://my.callback.url"):
+          Future.successful(Ok)
 
       status(result) shouldBe OK
-    }
 
-    "disallow http callback urls" in {
+    "disallow http callback urls" in:
       val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())
 
-      val result = controller.withAllowedCallbackProtocol("http://my.callback.url") {
-        Future.failed(new RuntimeException("This block should not have been invoked."))
-      }
+      val result =
+        controller.withAllowedCallbackProtocol("http://my.callback.url"):
+          Future.failed(new RuntimeException("This block should not have been invoked."))
 
       status(result)          shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid callback url protocol")
-    }
 
-    "disallow invalidly formatted callback urls" in {
+    "disallow invalidly formatted callback urls" in:
       val controller = new InitiateController(mock[PrepareUploadService], stubControllerComponents())
 
-      val result = controller.withAllowedCallbackProtocol("123") {
-        Future.failed(new RuntimeException("This block should not have been invoked."))
-      }
+      val result =
+        controller.withAllowedCallbackProtocol("123"):
+          Future.failed(new RuntimeException("This block should not have been invoked."))
+
       status(result)          shouldBe BAD_REQUEST
       contentAsString(result) should include("Invalid callback url format")
-    }
-  }
-}
 
-private object InitiateControllerSpec {
-  val CallbackUrl = "https://myservice.com/callback"
-  val UserAgent = "InitiateControllerSpec"
-  val ConsumingService = "some-consuming-service"
+private object InitiateControllerSpec:
+  val CallbackUrl        = "https://myservice.com/callback"
+  val UserAgent          = "InitiateControllerSpec"
+  val ConsumingService   = "some-consuming-service"
   val SuccessRedirectUrl = "https://www.example.com/nextpage"
-  val ErrorRedirectUrl = "https://www.example.com/error"
-  val UploadUrl = "http://myservice.com/upload"
-}
+  val ErrorRedirectUrl   = "https://www.example.com/error"
+  val UploadUrl          = "http://myservice.com/upload"

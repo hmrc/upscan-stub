@@ -16,12 +16,13 @@
 
 package uk.gov.hmrc.upscanstub.model.initiate
 
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{Format, Json}
 
-case class UploadFormTemplate(href: String, fields: Map[String, String])
+case class UploadFormTemplate(
+  href  : String,
+  fields: Map[String, String]
+)
 
-object UploadFormTemplate {
-
-  implicit val writes: OFormat[UploadFormTemplate] = Json.format[UploadFormTemplate]
-
-}
+object UploadFormTemplate:
+  implicit val writes: Format[UploadFormTemplate] =
+    Json.format[UploadFormTemplate]

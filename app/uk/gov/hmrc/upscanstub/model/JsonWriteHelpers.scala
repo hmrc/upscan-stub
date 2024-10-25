@@ -18,10 +18,8 @@ package uk.gov.hmrc.upscanstub.model
 
 import java.net.URL
 
-import play.api.libs.json.{JsString, JsValue, Writes}
+import play.api.libs.json.{JsString, Writes}
 
-object JsonWriteHelpers {
-  implicit val urlFormats: Writes[URL] = new Writes[URL] {
-    override def writes(o: URL): JsValue = JsString(o.toString)
-  }
-}
+object JsonWriteHelpers:
+  implicit val urlFormats: Writes[URL] =
+    (o: URL) => JsString(o.toString)

@@ -34,14 +34,17 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
-class UploadProxyControllerSpec extends AnyWordSpec with Matchers with OptionValues {
+class UploadProxyControllerSpec
+  extends AnyWordSpec
+     with Matchers
+     with OptionValues:
 
   import UploadProxyControllerSpec._
 
   private implicit val timeout: Timeout = Timeout(1.second)
 
-  "UploadProxyController's ErrorResponseHandler" should {
-    "redirect providing error details as query parameters when a redirectUrl is specified" in {
+  "UploadProxyController's ErrorResponseHandler" should:
+    "redirect providing error details as query parameters when a redirectUrl is specified" in:
       val errorAction = ErrorAction(redirectUrl = Some("https://myservice.com/error"), Key)
 
       val result  = proxyErrorResponse(errorAction, statusCode = BAD_REQUEST, AwsXmlResponseBody, AwsResponseHeaders)
@@ -52,17 +55,16 @@ class UploadProxyControllerSpec extends AnyWordSpec with Matchers with OptionVal
       locationHeader.getHost shouldBe "myservice.com"
       locationHeader.getPath shouldBe "/error"
       queryParametersOf(locationHeader) should contain theSameElementsAs Seq(
-        "key" -> Key,
-        "errorCode" -> "NoSuchKey",
-        "errorMessage" -> "The resource you requested does not exist",
-        "errorResource" -> "/mybucket/myfoto.jpg",
+        "key"            -> Key,
+        "errorCode"      -> "NoSuchKey",
+        "errorMessage"   -> "The resource you requested does not exist",
+        "errorResource"  -> "/mybucket/myfoto.jpg",
         "errorRequestId" -> "4442587FB7D0A2F9"
       )
       result.body.isKnownEmpty shouldBe true
       result.header.headers should not contain key (CONTENT_TYPE)
-    }
 
-    "return error details as a json body when a redirectUrl is not specified" in {
+    "return error details as a json body when a redirectUrl is not specified" in:
       val errorAction = ErrorAction(redirectUrl = None, Key)
 
       val result = proxyErrorResponse(errorAction, statusCode = BAD_REQUEST, AwsXmlResponseBody, AwsResponseHeaders)
@@ -70,12 +72,10 @@ class UploadProxyControllerSpec extends AnyWordSpec with Matchers with OptionVal
       result.header.status shouldBe BAD_REQUEST
       result.body.contentType should contain (JSON)
       contentAsJson(Future.successful(result)) shouldBe AwsErrorAsJson
-    }
-  }
-}
 
-private object UploadProxyControllerSpec {
+private object UploadProxyControllerSpec:
   val Key = "ABC123"
+
   val AwsXmlResponseBody =
     """|<?xml version="1.0" encoding="UTF-8"?>
        |<Error>
@@ -97,8 +97,7 @@ private object UploadProxyControllerSpec {
   val AwsResponseHeaders = Map.empty[String, Seq[String]]
 
   def locationHeaderUriFrom(result: Result): Option[URIBuilder] =
-    result.header.headers.get(LOCATION).map(new URIBuilder(_))
+    result.header.headers.get(LOCATION).map(URIBuilder(_))
 
   def queryParametersOf(uri: URIBuilder): Seq[(String, String)] =
     uri.getQueryParams.asScala.map(nv => nv.getName -> nv.getValue).toSeq
-}

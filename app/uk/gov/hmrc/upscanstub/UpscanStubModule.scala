@@ -24,17 +24,19 @@ import uk.gov.hmrc.upscanstub.service.{HttpNotificationSender, NotificationQueue
 import java.time.Clock
 import javax.inject.{Inject, Provider, Singleton}
 
-class UpscanStubModule extends Module {
+class UpscanStubModule extends Module:
+
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] = Seq(
-    bind[NotificationSender].to[HttpNotificationSender],
+    bind[NotificationSender        ].to[HttpNotificationSender],
     bind[NotificationQueueProcessor].toProvider[NotificationQueueProcessorProvider].in[Singleton],
-    bind[Clock].toInstance(Clock.systemDefaultZone)
+    bind[Clock                     ].toInstance(Clock.systemDefaultZone)
   )
 
-}
+class NotificationQueueProcessorProvider @Inject()(
+  notificationService: NotificationSender
+)(
+  actorSystem: ActorSystem
+) extends Provider[NotificationQueueProcessor]:
 
-class NotificationQueueProcessorProvider @Inject()(notificationService: NotificationSender)(actorSystem: ActorSystem)
-    extends Provider[NotificationQueueProcessor] {
   override def get(): NotificationQueueProcessor =
     new NotificationQueueProcessor(notificationService)(actorSystem)
-}

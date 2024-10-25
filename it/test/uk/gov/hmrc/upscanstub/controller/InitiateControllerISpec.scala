@@ -32,7 +32,12 @@ import uk.gov.hmrc.upscanstub.model.initiate.PrepareUploadResponse
 
 import scala.concurrent.duration._
 
-class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen with OptionValues {
+class InitiateControllerISpec
+  extends AnyWordSpec
+     with Matchers
+     with GuiceOneAppPerSuite
+     with GivenWhenThen
+     with OptionValues:
 
   private implicit val actorSystem: ActorSystem                   = ActorSystem()
   private implicit val timeout    : org.apache.pekko.util.Timeout = 10.seconds
@@ -59,9 +64,9 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       responseFieldsMatcher = Some(contain("error_action_redirect" -> errorRedirectUrl)))
   }
 
-  private def upscanInitiate(uri: String, href: String): Unit = { // scalastyle:ignore
+  private def upscanInitiate(uri: String, href: String): Unit = // scalastyle:ignore
 
-    "respond with expected success JSON when passed a valid minimal request" in {
+    "respond with expected success JSON when passed a valid minimal request" in:
       Given("a valid request JSON body")
       val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
 
@@ -93,9 +98,8 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       fields.get("success_action_redirect") shouldBe empty
       fields.get("error_action_redirect") shouldBe empty
       fields.get("Content-Type") shouldBe empty
-    }
 
-    "respond with Bad Request when the User-Agent header is missing from the request" in {
+    "respond with Bad Request when the User-Agent header is missing from the request" in:
       val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
 
       Given("a request without a User-Agent header")
@@ -106,9 +110,8 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       Then("the response should indicate the request is invalid")
       status(initiateResponse) shouldBe BAD_REQUEST
-    }
 
-    "respond with expected error JSON when passed an invalid request" in {
+    "respond with expected error JSON when passed an invalid request" in:
       Given("an invalid request JSON body")
       val postBodyMissingCallbackUrlJson = Json.obj("someKey" -> "someValue")
 
@@ -124,9 +127,8 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       contentAsString(initiateResponse) should include(
         "payload: List((/callbackUrl,List(JsonValidationError(List(error.path.missing),ArraySeq()))))"
       )
-    }
 
-    "respond with supplied file size constraints in the policy" in {
+    "respond with supplied file size constraints in the policy" in:
       Given("a valid request with file size constraints")
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
@@ -143,13 +145,11 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       status(initiateResponse) shouldBe OK
 
       And("the response policy includes the supplied file size constraints")
-      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
+      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)): (min, max) =>
         min shouldBe Some(123)
         max shouldBe Some(456)
-      }
-    }
 
-    "respond with default file size constraints in the policy when supplied values are missing" in {
+    "respond with default file size constraints in the policy when supplied values are missing" in:
       Given("a valid request with no file size constraints")
       val postBodyJson = Json.obj("callbackUrl" -> "http://localhost:9570/callback")
 
@@ -162,13 +162,11 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       status(initiateResponse) shouldBe OK
 
       And("the response policy includes the default file size constraints")
-      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)) { (min, max) =>
+      withMinMaxFileSizesInPolicyConditions(contentAsJson(initiateResponse)): (min, max) =>
         min shouldBe Some(0)
         max shouldBe Some(104857600)
-      }
-    }
 
-    "respond with Bad Request when supplied file size constraints are outside of expected limits" in {
+    "respond with Bad Request when supplied file size constraints are outside of expected limits" in:
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
@@ -183,9 +181,8 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       Then("a Bad Request response is returned")
       status(initiateResponse) shouldBe BAD_REQUEST
-    }
 
-    "respond with Bad Request when supplied min value is greater than the max value" in {
+    "respond with Bad Request when supplied min value is greater than the max value" in:
       Given("an invalid request with invalid file size limits")
       val postBodyJson = Json.obj(
         "callbackUrl"         -> "http://localhost:9570/callback",
@@ -200,15 +197,15 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       Then("a Bad Request response is returned")
       status(initiateResponse) shouldBe BAD_REQUEST
-    }
-  }
 
-  private def upscanInitiateWithAllFields(uri: String,
-                                          href: String,
-                                          extraRequestFields: JsObject = JsObject.empty,
-                                          responseFieldsMatcher: Option[Matcher[Map[String, String]]]): Unit = { // scalastyle:ignore
+  private def upscanInitiateWithAllFields(
+    uri                  : String,
+    href                 : String,
+    extraRequestFields   : JsObject                           = JsObject.empty,
+    responseFieldsMatcher: Option[Matcher[Map[String, String]]]
+  ): Unit = // scalastyle:ignore
 
-    "respond with expected success JSON when passed a valid request with all fields" in {
+    "respond with expected success JSON when passed a valid request with all fields" in:
       Given("a valid request JSON body")
       val postBodyJson = Json.obj(
         "callbackUrl"      -> "http://localhost:9570/callback",
@@ -245,23 +242,20 @@ class InitiateControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
       fields.get("x-amz-meta-callback-url") should contain ("http://localhost:9570/callback")
       fields.get("success_action_redirect").value should startWith("https://www.example.com/nextpage?key=")
       responseFieldsMatcher.foreach(matchExpectations => fields should matchExpectations)
-    }
-  }
 
-  private def withMinMaxFileSizesInPolicyConditions[T](responseBodyJson: JsValue)(
-    block: (Option[Long], Option[Long]) => T): T = {
+  private def withMinMaxFileSizesInPolicyConditions[T](
+    responseBodyJson: JsValue
+  )(
+    block: (Option[Long], Option[Long]) => T
+  ): T =
     import uk.gov.hmrc.upscanstub.util.Implicits.Base64StringOps
 
     val maybeBase64policy = (responseBodyJson \ "uploadRequest" \ "fields" \ "policy").asOpt[String]
 
-    val policy: String = maybeBase64policy.get.base64decode()
-
-    val policyJson: JsValue = Json.parse(policy)
+    val policyJson: JsValue = Json.parse(maybeBase64policy.get.base64decode())
 
     val conditions = (policyJson \ "conditions")(0)
 
     conditions(0).asOpt[String] shouldBe Some("content-length-range")
 
     block(conditions(1).asOpt[Long], conditions(2).asOpt[Long])
-  }
-}

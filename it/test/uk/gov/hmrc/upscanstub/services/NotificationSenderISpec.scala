@@ -48,12 +48,12 @@ class NotificationSenderISpec
      with WireMockSupport
      with BeforeAndAfterAll
      with GivenWhenThen
-     with Eventually {
+     with Eventually:
 
   implicit override val patienceConfig =
     PatienceConfig(timeout = scaled(Span(5, Seconds)), interval = scaled(Span(300, Millis)))
 
-  implicit val actorSystem: ActorSystem        = ActorSystem()
+  implicit val actorSystem: ActorSystem = ActorSystem()
 
   val requestHeaders = FakeHeaders(Seq((USER_AGENT, "InitiateControllerISpec")))
 
@@ -61,32 +61,31 @@ class NotificationSenderISpec
     .overrides(bind[Clock].to[NotificationSenderClock])
     .build()
 
-  override def beforeAll(): Unit = {
+  override def beforeAll(): Unit =
     super.beforeAll()
     Play.start(fakeApplication)
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     super.afterAll()
     Play.stop(fakeApplication)
-  }
 
-  "UpscanStub" should {
-    "initiate a request, upload a file, make a callback, and download a non-infected file" in {
-
-      stubFor(
+  "UpscanStub" should:
+    "initiate a request, upload a file, make a callback, and download a non-infected file" in:
+      stubFor:
         post(urlPathEqualTo("/upscan/callback"))
-          .willReturn(aResponse().withStatus(OK)))
+          .willReturn(aResponse().withStatus(OK))
 
       Given("a valid initiate request")
-      val postBodyJson = Json.parse("""
-          |{
-          |	"callbackUrl": "http://localhost:9570/callback",
-          |	"minimumFileSize" : 0,
-          |	"maximumFileSize" : 1024,
-          |	"expectedContentType": "application/xml"
-          |}
-        """.stripMargin)
+      val postBodyJson =
+        Json.parse:
+          """
+            |{
+            |	"callbackUrl": "http://localhost:9570/callback",
+            |	"minimumFileSize" : 0,
+            |	"maximumFileSize" : 1024,
+            |	"expectedContentType": "application/xml"
+            |}
+          """.stripMargin
 
       val initiateRequest =
         FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
@@ -122,7 +121,7 @@ class NotificationSenderISpec
       status(uploadResponse) shouldBe 204
 
       And("a POST callback is received on the supplied callback URL")
-      eventually {
+      eventually:
         val expectedCallback = Json
           .obj(
             "reference"  -> fileReference,
@@ -137,9 +136,11 @@ class NotificationSenderISpec
             )
           )
           .toString
+
         verify(
           1,
-          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(equalToJson(expectedCallback, true, true)))
+          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(equalToJson(expectedCallback, true, true))
+        )
 
         Then("the expected file should be available for download from the URL in the callback body")
         val callbackBody = getAllServeEvents.asScala.toList.head.getRequest.getBodyAsString
@@ -151,24 +152,23 @@ class NotificationSenderISpec
         status(downloadResponse) shouldBe 200
         val downloadContents: String = contentAsString(downloadResponse)
         downloadContents shouldBe "End to end notification test contents"
-      }
-    }
 
-    "initiate a request, upload a file, make a callback, and report the error for an infected file" in {
-
-      stubFor(
+    "initiate a request, upload a file, make a callback, and report the error for an infected file" in:
+      stubFor:
         post(urlPathEqualTo("/upscan/callback"))
-          .willReturn(aResponse().withStatus(OK)))
+          .willReturn(aResponse().withStatus(OK))
 
       Given("a valid initiate request")
-      val postBodyJson = Json.parse("""
-                                      |{
-                                      |	"callbackUrl": "http://localhost:9570/callback",
-                                      |	"minimumFileSize" : 0,
-                                      |	"maximumFileSize" : 1024,
-                                      |	"expectedContentType": "application/xml"
-                                      |}
-                                    """.stripMargin)
+      val postBodyJson =
+        Json.parse:
+          """
+            |{
+            |	"callbackUrl": "http://localhost:9570/callback",
+            |	"minimumFileSize" : 0,
+            |	"maximumFileSize" : 1024,
+            |	"expectedContentType": "application/xml"
+            |}
+          """.stripMargin
 
       val initiateRequest =
         FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
@@ -192,6 +192,7 @@ class NotificationSenderISpec
 
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile]("file", "my-infected-file", None, file)
+
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = formFields,
         files     = Seq(filePart),
@@ -204,7 +205,7 @@ class NotificationSenderISpec
       status(uploadResponse) shouldBe 204
 
       And("a POST callback is received on the supplied callback URL detailing the infected file")
-      eventually {
+      eventually:
         val expectedCallback = Json
           .obj(
             "reference"  -> fileReference,
@@ -215,28 +216,28 @@ class NotificationSenderISpec
             )
           )
           .toString
+
         verify(
           1,
-          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
-      }
-    }
-  }
+          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString))
+        )
 
-  "initiate a request, upload a file, make a callback, and report the error for a simulated infected file" in {
-
-      stubFor(
+    "initiate a request, upload a file, make a callback, and report the error for a simulated infected file" in:
+      stubFor:
         post(urlPathEqualTo("/upscan/callback"))
-          .willReturn(aResponse().withStatus(OK)))
+          .willReturn(aResponse().withStatus(OK))
 
       Given("a valid initiate request")
-      val postBodyJson = Json.parse("""
-                                      |{
-                                      |	"callbackUrl": "http://localhost:9570/callback",
-                                      |	"minimumFileSize" : 0,
-                                      |	"maximumFileSize" : 1024,
-                                      |	"expectedContentType": "application/xml"
-                                      |}
-                                    """.stripMargin)
+      val postBodyJson =
+        Json.parse:
+          """
+            |{
+            |	"callbackUrl": "http://localhost:9570/callback",
+            |	"minimumFileSize" : 0,
+            |	"maximumFileSize" : 1024,
+            |	"expectedContentType": "application/xml"
+            |}
+          """.stripMargin
 
       val initiateRequest =
         FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
@@ -272,7 +273,7 @@ class NotificationSenderISpec
       status(uploadResponse) shouldBe 204
 
       And("a POST callback is received on the supplied callback URL detailing the infected file")
-      eventually {
+      eventually:
         val expectedCallback = Json
           .obj(
             "reference"  -> fileReference,
@@ -283,27 +284,28 @@ class NotificationSenderISpec
             )
           )
           .toString
+
         verify(
           1,
-          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
-      }
-    }
+          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString))
+        )
 
-    "initiate a request, upload a file, make a callback, and report the error for a simulated invalid file" in {
-
-      stubFor(
+    "initiate a request, upload a file, make a callback, and report the error for a simulated invalid file" in:
+      stubFor:
         post(urlPathEqualTo("/upscan/callback"))
-          .willReturn(aResponse().withStatus(OK)))
+          .willReturn(aResponse().withStatus(OK))
 
       Given("a valid initiate request")
-      val postBodyJson = Json.parse("""
-                                      |{
-                                      |	"callbackUrl": "http://localhost:9570/callback",
-                                      |	"minimumFileSize" : 0,
-                                      |	"maximumFileSize" : 1024,
-                                      |	"expectedContentType": "application/xml"
-                                      |}
-                                    """.stripMargin)
+      val postBodyJson =
+        Json.parse:
+          """
+            |{
+            |	"callbackUrl": "http://localhost:9570/callback",
+            |	"minimumFileSize" : 0,
+            |	"maximumFileSize" : 1024,
+            |	"expectedContentType": "application/xml"
+            |}
+          """.stripMargin
 
       val initiateRequest =
         FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
@@ -327,6 +329,7 @@ class NotificationSenderISpec
 
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile]("file", "invalid.ZipInDisguise.txt", None, file)
+
       val postBodyForm: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = formFields,
         files     = Seq(filePart),
@@ -339,7 +342,7 @@ class NotificationSenderISpec
       status(uploadResponse) shouldBe 204
 
       And("a POST callback is received on the supplied callback URL detailing the infected file")
-      eventually {
+      eventually:
         val expectedCallback = Json
           .obj(
             "reference"  -> fileReference,
@@ -350,27 +353,28 @@ class NotificationSenderISpec
             )
           )
           .toString
+
         verify(
           1,
-          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
-      }
-    }
+          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString))
+        )
 
-    "initiate a request, upload a file, make a callback, and report the error for a simulated unknown file" in {
-
-      stubFor(
+    "initiate a request, upload a file, make a callback, and report the error for a simulated unknown file" in:
+      stubFor:
         post(urlPathEqualTo("/upscan/callback"))
-          .willReturn(aResponse().withStatus(OK)))
+          .willReturn(aResponse().withStatus(OK))
 
       Given("a valid initiate request")
-      val postBodyJson = Json.parse("""
-                                      |{
-                                      |	"callbackUrl": "http://localhost:9570/callback",
-                                      |	"minimumFileSize" : 0,
-                                      |	"maximumFileSize" : 1024,
-                                      |	"expectedContentType": "application/xml"
-                                      |}
-                                    """.stripMargin)
+      val postBodyJson =
+        Json.parse:
+          """
+            |{
+            |	"callbackUrl": "http://localhost:9570/callback",
+            |	"minimumFileSize" : 0,
+            |	"maximumFileSize" : 1024,
+            |	"expectedContentType": "application/xml"
+            |}
+          """.stripMargin
 
       val initiateRequest =
         FakeRequest(Helpers.POST, "/upscan/initiate", requestHeaders, postBodyJson)
@@ -406,7 +410,7 @@ class NotificationSenderISpec
       status(uploadResponse) shouldBe 204
 
       And("a POST callback is received on the supplied callback URL detailing the unknown file")
-      eventually {
+      eventually:
         val expectedCallback = Json
           .obj(
             "reference"  -> fileReference,
@@ -417,18 +421,16 @@ class NotificationSenderISpec
             )
           )
           .toString
+
         verify(
           1,
-          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString)))
-      }
-    }
+          postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString))
+        )
 
-}
-
-class NotificationSenderClock extends Clock {
+// TODO use fixed Clock
+class NotificationSenderClock extends Clock:
   override def withZone(zone: ZoneId): Clock = ???
 
   override def getZone: ZoneId = ???
 
   override def instant(): Instant = Instant.parse("2018-04-24T09:30:00Z")
-}

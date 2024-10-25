@@ -19,20 +19,12 @@ package uk.gov.hmrc.upscanstub.util
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class ImplicitsSpec extends AnyWordSpec with Matchers {
+class ImplicitsSpec extends AnyWordSpec with Matchers:
   import Implicits.Base64StringOps
 
-  "Base64StringOps" should {
-    "base64 encode a String" in {
-      val actual: String = "Hello, World".base64encode()
+  "Base64StringOps" should:
+    "base64 encode a String" in:
+      "Hello, World".base64encode() shouldBe "SGVsbG8sIFdvcmxk"
 
-      actual shouldBe "SGVsbG8sIFdvcmxk"
-    }
-
-    "base64 decode a String" in {
-      val actual: String = "SGVsbG8sIFdvcmxk".base64decode()
-
-      actual shouldBe "Hello, World"
-    }
-  }
-}
+    "base64 decode a String" in:
+      "SGVsbG8sIFdvcmxk".base64decode() shouldBe "Hello, World"

@@ -22,7 +22,7 @@ object ApplicativeHelpers {
     e1: Either[Iterable[E], T1],
     e2: Either[Iterable[E], T2]
   ): Either[Iterable[E], (T1, T2)] =
-    if (e1.isRight && e2.isRight)
+    if e1.isRight && e2.isRight then
       Right((e1.toOption.get, e2.toOption.get))
     else
       Left((e1.left.toSeq ++ e2.left.toSeq).flatten)

@@ -24,9 +24,12 @@ import play.api.libs.json.{JsValue, Json}
 import uk.gov.hmrc.upscanstub.model.initiate.{PrepareUploadRequest, PrepareUploadResponse, UploadSettings}
 import uk.gov.hmrc.upscanstub.util.Implicits._
 
-class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValues {
+class PrepareUploadServiceSpec
+  extends AnyWordSpec
+     with Matchers
+     with OptionValues:
 
-  "PrepareUploadService.prepareUpload" should {
+  "PrepareUploadService.prepareUpload" should:
     val testInstance = new PrepareUploadService()
     val userAgent    = "PrepareUploadServiceSpec"
 
@@ -47,7 +50,7 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
         prepareUploadRequest = prepareUploadRequest
       )
 
-    "include supplied file size constraints in the policy" in {
+    "include supplied file size constraints in the policy" in:
       val settings =
         uploadSettings
           .copy(
@@ -61,13 +64,11 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
 
       val result = testInstance.prepareUpload(settings)
 
-      withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
+      withMinMaxFileSizesInPolicyConditions(result): (min, max) =>
         min shouldBe Some(10)
         max shouldBe Some(100)
-      }
-    }
 
-    "include default file size constraints in the policy" in {
+    "include default file size constraints in the policy" in:
       val settings =
         uploadSettings
           .copy(
@@ -81,13 +82,11 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
 
       val result = testInstance.prepareUpload(settings)
 
-      withMinMaxFileSizesInPolicyConditions(result) { (min, max) =>
+      withMinMaxFileSizesInPolicyConditions(result): (min, max) =>
         min shouldBe Some(0)
         max shouldBe Some(104857600)
-      }
-    }
 
-    "include all required fields" in {
+    "include all required fields" in:
       val result = testInstance.prepareUpload(uploadSettings)
 
       val formFields = result.uploadRequest.fields
@@ -110,9 +109,8 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
         "x-amz-meta-request-id",
         "x-amz-meta-original-filename"
       )
-    }
 
-    "include upload redirect URLs when specified" in {
+    "include upload redirect URLs when specified" in:
       val settings =
         uploadSettings
           .copy(
@@ -128,9 +126,8 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
 
       result.uploadRequest.fields.get("error_action_redirect") should contain ("https://www.example.com/error")
       result.uploadRequest.fields.get("success_action_redirect").value should startWith("https://www.example.com/success?key=")
-    }
 
-    "retain any existing query parameters on upload redirect URLs when specified" in {
+    "retain any existing query parameters on upload redirect URLs when specified" in:
       val settings =
         uploadSettings
           .copy(
@@ -153,9 +150,8 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
       successActionQueryParams.map(_.getName) should contain theSameElementsAs Seq("upload", "key")
       successActionQueryParams.exists(qp => qp.getName == "upload" && qp.getValue == "1234") shouldBe true
       successActionRedirectUrl.clearParameters().build().toASCIIString shouldBe "https://www.example.com/success"
-    }
 
-    "include `consumingService` from `USER-AGENT` header if not supplied explicitly" in {
+    "include `consumingService` from `USER-AGENT` header if not supplied explicitly" in:
       val userAgent =
         "some-user-agent"
 
@@ -166,9 +162,8 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
       val result = testInstance.prepareUpload(settings)
 
       result.uploadRequest.fields.get("x-amz-meta-consuming-service") should contain (userAgent)
-    }
 
-    "include `consumingService` when supplied explicitly, overriding the `USER-AGENT` fallback" in {
+    "include `consumingService` when supplied explicitly, overriding the `USER-AGENT` fallback" in:
       val userAgent =
         "some-user-agent"
 
@@ -187,20 +182,16 @@ class PrepareUploadServiceSpec extends AnyWordSpec with Matchers with OptionValu
       val result = testInstance.prepareUpload(settings)
 
       result.uploadRequest.fields.get("x-amz-meta-consuming-service") should contain (consumingService)
-    }
-  }
 
-  private def withMinMaxFileSizesInPolicyConditions[T](preparedUpload: PrepareUploadResponse)(
-    block: (Option[Long], Option[Long]) => T): T = {
-
-    val policy: String = preparedUpload.uploadRequest.fields("policy").base64decode()
-
-    val policyJson: JsValue = Json.parse(policy)
+  private def withMinMaxFileSizesInPolicyConditions[T](
+    preparedUpload: PrepareUploadResponse
+  )(
+    block: (Option[Long], Option[Long]) => T
+  ): T =
+    val policyJson: JsValue = Json.parse(preparedUpload.uploadRequest.fields("policy").base64decode())
 
     val conditions = (policyJson \ "conditions")(0)
 
     conditions(0).asOpt[String] shouldBe Some("content-length-range")
 
     block(conditions(1).asOpt[Long], conditions(2).asOpt[Long])
-  }
-}

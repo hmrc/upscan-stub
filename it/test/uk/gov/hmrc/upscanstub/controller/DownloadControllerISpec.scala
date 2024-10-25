@@ -30,14 +30,17 @@ import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.hmrc.upscanstub.service.FileStorageService
 
-class DownloadControllerISpec extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with GivenWhenThen {
+class DownloadControllerISpec
+  extends AnyWordSpec
+     with Matchers
+     with GuiceOneAppPerSuite
+     with GivenWhenThen:
 
-  implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: Materializer      = NoMaterializer
+  implicit val actorSystem: ActorSystem   = ActorSystem()
+  implicit val materializer: Materializer = NoMaterializer
 
-  "DownloadController" should {
-
-    "download a file" in {
+  "DownloadController" should:
+    "download a file" in:
       Given("a reference to a previously stored file")
       val file = SingletonTemporaryFileCreator.create("my-it-file", ".txt")
 
@@ -58,9 +61,8 @@ class DownloadControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       And("the file is no longer in its original location")
       Files.exists(file.toPath) shouldBe false
-    }
 
-    "return Not Found for invalid file reference" in {
+    "return Not Found for invalid file reference" in:
       Given("an invalid file reference")
       val downloadRequest = FakeRequest(Helpers.GET, "/upscan/download/my-invalid-file")
 
@@ -69,6 +71,3 @@ class DownloadControllerISpec extends AnyWordSpec with Matchers with GuiceOneApp
 
       Then("a Not Found response should be returned")
       status(downloadResponse) shouldBe 404
-    }
-  }
-}

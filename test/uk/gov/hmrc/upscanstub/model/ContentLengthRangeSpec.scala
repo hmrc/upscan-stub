@@ -20,36 +20,28 @@ import org.scalatest.GivenWhenThen
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-class ContentLengthRangeSpec extends AnyWordSpec with Matchers with GivenWhenThen {
-  "ContentLengthRange extractor" should {
-    "extract min/max values" in {
+class ContentLengthRangeSpec
+  extends AnyWordSpec
+     with Matchers
+     with GivenWhenThen:
+
+  "ContentLengthRange extractor" should:
+    "extract min/max values" in:
       val policy = "{\"conditions\":[[\"content-length-range\",10,99]]}"
-
       ContentLengthRange.extract(policy) shouldBe Some(ContentLengthRange(Some(10),Some(99)))
-    }
 
-    "extract min value" in {
+    "extract min value" in:
       val policy = "{\"conditions\":[[\"content-length-range\",10,null]]}"
-
       ContentLengthRange.extract(policy) shouldBe Some(ContentLengthRange(Some(10),None))
-    }
 
-    "extract max value" in {
+    "extract max value" in:
       val policy = "{\"conditions\":[[\"content-length-range\",null,99]]}"
-
       ContentLengthRange.extract(policy) shouldBe Some(ContentLengthRange(None,Some(99)))
-    }
 
-    "extract None when condition name is not present in array" in {
+    "extract None when condition name is not present in array" in:
       val policy = "{\"conditions\":[[\"blah\",null,99]]}"
-
       ContentLengthRange.extract(policy) shouldBe None
-    }
 
-    "extract None for min/max when policy json is wrong schema" in {
+    "extract None for min/max when policy json is wrong schema" in:
       val policy = "{\"blah\":null}"
-
       ContentLengthRange.extract(policy) shouldBe None
-    }
-  }
-}

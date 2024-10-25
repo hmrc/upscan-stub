@@ -23,13 +23,15 @@ import org.scalatest.wordspec.AnyWordSpec
 import play.api.libs.Files.SingletonTemporaryFileCreator
 import uk.gov.hmrc.upscanstub.model.FileId
 
-class FileStorageServiceSpec extends AnyWordSpec with Matchers with GivenWhenThen {
+class FileStorageServiceSpec
+  extends AnyWordSpec
+     with Matchers
+     with GivenWhenThen:
 
   val fileStorageService = new FileStorageService
 
-  "File storage service" should {
-    "Allow to store and retrieve file" in {
-
+  "File storage service" should:
+    "Allow to store and retrieve file" in:
       Given("there is a temporary file")
       val temporaryFile =
         SingletonTemporaryFileCreator.create("upscan-test", "")
@@ -44,12 +46,6 @@ class FileStorageServiceSpec extends AnyWordSpec with Matchers with GivenWhenThe
       retrievedFile          shouldBe defined
       retrievedFile.get.body shouldBe fileBody
 
-    }
-
-    "Return empty result when trying to retrieve non-existent file" in {
+    "Return empty result when trying to retrieve non-existent file" in:
       val retrievedFile = fileStorageService.get(FileId("non-existent-file"))
       retrievedFile shouldBe empty
-    }
-
-  }
-}

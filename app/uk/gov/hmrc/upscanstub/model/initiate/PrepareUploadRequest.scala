@@ -20,16 +20,16 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.libs.json.Reads.{max, min}
 
-final case class PrepareUploadRequest(
-  callbackUrl: String,
-  minimumFileSize: Option[Long],
-  maximumFileSize: Option[Long],
-  successRedirect: Option[String],
-  errorRedirect: Option[String],
+case class PrepareUploadRequest(
+  callbackUrl     : String,
+  minimumFileSize : Option[Long],
+  maximumFileSize : Option[Long],
+  successRedirect : Option[String],
+  errorRedirect   : Option[String],
   consumingService: Option[String]
 )
 
-object PrepareUploadRequest {
+object PrepareUploadRequest:
 
   def readsV1(maxFileSize: Long): Reads[PrepareUploadRequest] =
     readsV2(maxFileSize)
@@ -43,6 +43,5 @@ object PrepareUploadRequest {
     ~ (__ \ "errorRedirect"   ).readNullable[String]
     ~ (__ \ "consumingService").readNullable[String]
     )(PrepareUploadRequest.apply _)
-      .filter(JsonValidationError("Maximum file size must be equal or greater than minimum file size"))(request =>
-        request.minimumFileSize.getOrElse(0L) <= request.maximumFileSize.getOrElse(maxFileSize))
-}
+      .filter(JsonValidationError("Maximum file size must be equal or greater than minimum file size")): request =>
+        request.minimumFileSize.getOrElse(0L) <= request.maximumFileSize.getOrElse(maxFileSize)

@@ -39,25 +39,29 @@ import java.time.{Clock, Instant, ZoneId}
 import scala.concurrent.Future
 import scala.xml.Elem
 
-class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen with MockitoSugar {
+class UploadControllerSpec
+  extends AnyWordSpec
+     with Matchers
+     with GivenWhenThen
+     with MockitoSugar:
 
-  implicit val actorSystem: ActorSystem        = ActorSystem()
-  implicit val materializer: Materializer      = NoMaterializer
+  implicit val actorSystem: ActorSystem   = ActorSystem()
+  implicit val materializer: Materializer = NoMaterializer
 
   private val initiateDate = Instant.parse("2018-04-24T09:30:00Z")
   private val testClock    = new TestClock(initiateDate)
 
-  "UploadController" should {
-    "upload a successfully POSTed form and file" in {
+  "UploadController" should:
+    "upload a successfully POSTed form and file" in:
 
       Given("a valid form containing a valid file")
       val fileToUpload = CreateTempFileFromResource("/text-to-upload.txt")
       val filePart = new MultipartFormData.FilePart[TemporaryFile](
-        key = "file",
-        filename = "text-to-upload.pdf",
+        key         = "file",
+        filename    = "text-to-upload.pdf",
         contentType = None,
         fileToUpload,
-        fileSize = fileToUpload.length()
+        fileSize    = fileToUpload.length()
       )
       val formDataBody = new MultipartFormData[TemporaryFile](
         dataParts = Map(
@@ -103,27 +107,26 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
           new URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
             uploadTimestamp = initiateDate,
-            checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            fileMimeType = "application/pdf",
-            fileName = "text-to-upload.pdf",
-            size = fileToUpload.length()
+            checksum        = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            fileMimeType    = "application/pdf",
+            fileName        = "text-to-upload.pdf",
+            size            = fileToUpload.length()
           )
         ))
 
       And("a No Content response should be returned")
       val uploadStatus = status(uploadResult)
       uploadStatus shouldBe 204
-    }
 
-    "return HTTP redirect when redirect after success requested" in {
+    "return HTTP redirect when redirect after success requested" in:
       Given("a valid form containing a valid file")
       val fileToUpload = CreateTempFileFromResource("/text-to-upload.txt")
       val filePart = new MultipartFormData.FilePart[TemporaryFile](
-        key = "file",
-        filename = "text-to-upload.pdf",
+        key         = "file",
+        filename    = "text-to-upload.pdf",
         contentType = None,
         fileToUpload,
-        fileSize = fileToUpload.length()
+        fileSize    = fileToUpload.length()
       )
       val formDataBody = new MultipartFormData[TemporaryFile](
         dataParts = Map(
@@ -145,12 +148,15 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       val storedFile     = StoredFile(Array())
       val storageService = mock[FileStorageService]
       val fileId         = FileId("testFileId")
-      Mockito.when(storageService.store(any())).thenReturn(fileId)
-      Mockito.when(storageService.get(fileId)).thenReturn(Some(storedFile))
+      Mockito.when(storageService.store(any()))
+        .thenReturn(fileId)
+      Mockito.when(storageService.get(fileId))
+        .thenReturn(Some(storedFile))
 
       val notificationProcessor = mock[NotificationQueueProcessor]
       val virusScanner          = mock[VirusScanner]
-      Mockito.when(virusScanner.checkIfClean(any())).thenReturn(Clean)
+      Mockito.when(virusScanner.checkIfClean(any()))
+        .thenReturn(Clean)
 
       val controller =
         new UploadController(storageService, notificationProcessor, virusScanner, testClock, stubControllerComponents())
@@ -170,10 +176,10 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
           new URL(s"http://localhost/download/${fileId.value}"),
           UploadDetails(
             uploadTimestamp = initiateDate,
-            checksum = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            fileMimeType = "application/pdf",
-            fileName = "text-to-upload.pdf",
-            size = fileToUpload.length()
+            checksum        = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            fileMimeType    = "application/pdf",
+            fileName        = "text-to-upload.pdf",
+            size            = fileToUpload.length()
           )
         ))
 
@@ -182,10 +188,7 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       uploadStatus                                   shouldBe 303
       await(uploadResult).header.headers("Location") shouldBe "https://localhost"
 
-    }
-
-    "store details of a file that fails virus scanning and return successful" in {
-
+    "store details of a file that fails virus scanning and return successful" in:
       Given("a valid form containing a valid file")
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile](
@@ -238,10 +241,8 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       And("a No Content response should be returned")
       val uploadStatus = status(uploadResult)
       uploadStatus shouldBe 204
-    }
 
-    "error on an incomplete POSTed form" in {
-
+    "error on an incomplete POSTed form" in:
       Given("an invalid form containing a valid file")
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile](
@@ -280,15 +281,13 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       val uploadBody: String    = contentAsString(uploadResult)
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
-      (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (uploadBodyAsXml \\ "Code").head.text      shouldBe "InvalidArgument"
-      (uploadBodyAsXml \\ "Message").head.text   shouldBe "FormError(policy,List(error.required),List()), FormError(acl,List(error.required),List()), FormError(key,List(error.required),List())"
-      (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
+      (uploadBodyAsXml \\ "Error"    ).nonEmpty  shouldBe true
+      (uploadBodyAsXml \\ "Code"     ).head.text shouldBe "InvalidArgument"
+      (uploadBodyAsXml \\ "Message"  ).head.text shouldBe "FormError(policy,List(error.required),List()), FormError(acl,List(error.required),List()), FormError(key,List(error.required),List())"
+      (uploadBodyAsXml \\ "Resource" ).head.text shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
-    }
 
-    "redirect on a forced rejected upload" in {
-
+    "redirect on a forced rejected upload" in:
       Given("a valid form containing a valid file with forced error name schema")
       val filePart =
         new MultipartFormData.FilePart[TemporaryFile](
@@ -332,10 +331,8 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       redirectUrl should include("key=file-key")
       redirectUrl should include("errorCode=UnexpectedContent")
       redirectUrl should include("errorMessage=")
-    }
 
-    "error when no file in POSTed form" in {
-
+    "error when no file in POSTed form" in:
       Given("a valid form containing a NO file")
       val formDataBody: MultipartFormData[TemporaryFile] = new MultipartFormData[TemporaryFile](
         dataParts = Map(
@@ -371,19 +368,16 @@ class UploadControllerSpec extends AnyWordSpec with Matchers with GivenWhenThen 
       val uploadBody: String    = contentAsString(uploadResult)
       val uploadBodyAsXml: Elem = xml.XML.loadString(uploadBody)
 
-      (uploadBodyAsXml \\ "Error").nonEmpty      shouldBe true
-      (uploadBodyAsXml \\ "Code").head.text      shouldBe "InvalidArgument"
-      (uploadBodyAsXml \\ "Message").head.text   shouldBe "'file' field not found"
-      (uploadBodyAsXml \\ "Resource").head.text  shouldBe "NoFileReference"
+      (uploadBodyAsXml \\ "Error"    ).nonEmpty  shouldBe true
+      (uploadBodyAsXml \\ "Code"     ).head.text shouldBe "InvalidArgument"
+      (uploadBodyAsXml \\ "Message"  ).head.text shouldBe "'file' field not found"
+      (uploadBodyAsXml \\ "Resource" ).head.text shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
-    }
-  }
 
-  class TestClock(fixedInstant: Instant) extends Clock {
+  // TODO use FixedClock
+  class TestClock(fixedInstant: Instant) extends Clock:
     override def instant(): Instant = fixedInstant
 
     override def withZone(zone: ZoneId): Clock = ???
 
     override def getZone: ZoneId = ???
-  }
-}

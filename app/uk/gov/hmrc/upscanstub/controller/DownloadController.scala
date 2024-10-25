@@ -27,29 +27,31 @@ import uk.gov.hmrc.upscanstub.service.FileStorageService
 import java.security.MessageDigest
 import javax.inject.Inject
 
-class DownloadController @Inject()(storageService: FileStorageService, cc: ControllerComponents) extends BackendController(cc) {
+class DownloadController @Inject()(
+  storageService: FileStorageService,
+  cc            : ControllerComponents
+) extends BackendController(cc):
 
   private val logger = Logger(this.getClass)
 
-  def download(fileId: String): Action[AnyContent] = Action {
+  def download(fileId: String): Action[AnyContent] =
+    Action:
+      val result: Result =
+        (for
+           source <- storageService.get(FileId(fileId))
+         yield
+           val md    = MessageDigest.getInstance("MD5")
+           val bytes = source.body
+           md.update(bytes)
 
-    val result: Result = (for {
-      source <- storageService.get(FileId(fileId))
-    } yield {
+           val etag  = md.digest().map("%02x".format(_)).mkString
 
-      val md    = MessageDigest.getInstance("MD5")
-      val bytes = source.body
-      md.update(bytes)
-      val etag    = md.digest().map("%02x".format(_)).mkString
+           Result(
+             header = ResponseHeader(200, Map("ETag" -> s""""$etag"""")),
+             body   = HttpEntity.Strict(ByteString(bytes), None)
+           )
+        ).getOrElse(NotFound)
 
-      Result(
-        header = ResponseHeader(200, Map("ETag" -> s""""$etag"""")),
-        body   = HttpEntity.Strict(ByteString(bytes), None)
-      )
-    }) getOrElse NotFound
+      logger.debug(s"Download request for Key=[$fileId], returning status: [${result.header.status}].")
 
-    logger.debug(s"Download request for Key=[$fileId], returning status: [${result.header.status}].")
-
-    result
-  }
-}
+      result
