@@ -21,6 +21,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import uk.gov.hmrc.upscanstub.connector.NotificationSender
 import uk.gov.hmrc.upscanstub.model.{ProcessedFile, Reference, UploadDetails}
 
 import java.net.URL

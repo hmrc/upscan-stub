@@ -21,7 +21,6 @@ import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.{BeforeAndAfterAll, GivenWhenThen}
 import org.scalatest.concurrent.{Eventually, IntegrationPatience}
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.http.HeaderNames.USER_AGENT
 import play.api.http.Writeable
@@ -40,7 +39,7 @@ import uk.gov.hmrc.upscanstub.it.util.MultipartFormDataWritable
 import uk.gov.hmrc.upscanstub.model.initiate.PrepareUploadResponse
 
 import java.nio.file.Files
-import java.time.{Clock, Instant, ZoneId}
+import java.time.{Clock, Instant, ZoneOffset}
 import scala.jdk.CollectionConverters._
 
 class NotificationSenderISpec
@@ -60,7 +59,7 @@ class NotificationSenderISpec
 
   lazy val fakeApplication: Application =
     GuiceApplicationBuilder()
-      .overrides(bind[Clock].to[NotificationSenderClock])
+      .overrides(bind[Clock].toInstance(Clock.fixed(Instant.parse("2018-04-24T09:30:00Z"), ZoneOffset.UTC)))
       .build()
 
   override def beforeAll(): Unit =
@@ -431,11 +430,3 @@ class NotificationSenderISpec
           1,
           postRequestedFor(urlEqualTo("/upscan/callback")).withRequestBody(containing(expectedCallback.toString))
         )
-
-// TODO use fixed Clock
-class NotificationSenderClock extends Clock:
-  override def withZone(zone: ZoneId): Clock = ???
-
-  override def getZone: ZoneId = ???
-
-  override def instant(): Instant = Instant.parse("2018-04-24T09:30:00Z")

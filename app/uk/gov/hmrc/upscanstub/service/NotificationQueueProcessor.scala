@@ -20,6 +20,7 @@ import org.apache.pekko.actor.{Actor, ActorLogging, ActorSystem, Props}
 import org.apache.pekko.pattern.pipe
 import org.apache.pekko.util.Timeout
 import uk.gov.hmrc.upscanstub.model.ProcessedFile
+import uk.gov.hmrc.upscanstub.connector.NotificationSender
 
 import scala.collection.immutable.Queue
 import scala.concurrent.ExecutionContext

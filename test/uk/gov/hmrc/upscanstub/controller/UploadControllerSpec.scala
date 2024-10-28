@@ -34,7 +34,7 @@ import uk.gov.hmrc.upscanstub.test.util.CreateTempFileFromResource
 import uk.gov.hmrc.upscanstub.util.Base64StringUtils
 
 import java.net.URL
-import java.time.{Clock, Instant, ZoneId}
+import java.time.{Clock, Instant, ZoneOffset}
 import scala.concurrent.Future
 import scala.xml.Elem
 
@@ -47,7 +47,7 @@ class UploadControllerSpec
   given ActorSystem = ActorSystem()
 
   private val initiateDate = Instant.parse("2018-04-24T09:30:00Z")
-  private val testClock    = TestClock(initiateDate)
+  private val testClock    = Clock.fixed(initiateDate, ZoneOffset.UTC)
 
   "UploadController" should:
     "upload a successfully POSTed form and file" in:
@@ -385,11 +385,3 @@ class UploadControllerSpec
       (uploadBodyAsXml \\ "Message"  ).head.text shouldBe "'file' field not found"
       (uploadBodyAsXml \\ "Resource" ).head.text shouldBe "NoFileReference"
       (uploadBodyAsXml \\ "RequestId").head.text shouldBe "SomeRequestId"
-
-  // TODO use FixedClock
-  class TestClock(fixedInstant: Instant) extends Clock:
-    override def instant(): Instant = fixedInstant
-
-    override def withZone(zone: ZoneId): Clock = ???
-
-    override def getZone: ZoneId = ???

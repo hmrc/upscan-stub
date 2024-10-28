@@ -19,7 +19,8 @@ package uk.gov.hmrc.upscanstub
 import org.apache.pekko.actor.ActorSystem
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
-import uk.gov.hmrc.upscanstub.service.{HttpNotificationSender, NotificationQueueProcessor, NotificationSender}
+import uk.gov.hmrc.upscanstub.connector.{HttpNotificationSender, NotificationSender}
+import uk.gov.hmrc.upscanstub.service. NotificationQueueProcessor
 
 import java.time.Clock
 import javax.inject.{Inject, Provider, Singleton}

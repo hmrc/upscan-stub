@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.upscanstub.service
+package uk.gov.hmrc.upscanstub.connector
 
 import org.apache.pekko.actor.ActorSystem
 import play.api.{Configuration, Logger}
 import play.api.libs.json._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import play.api.libs.ws.writeableOf_JsValue
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.upscanstub.model._
 
 import java.net.URL
 import javax.inject.Inject
-import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
 trait NotificationSender:
@@ -71,9 +73,9 @@ object ErrorDetails:
     Json.format[ErrorDetails]
 
 class HttpNotificationSender @Inject()(
-  httpClient : HttpClient,
-  actorSystem: ActorSystem,
-  config     : Configuration,
+  httpClientV2: HttpClientV2,
+  actorSystem : ActorSystem,
+  config      : Configuration
 )(using
   ExecutionContext
 ) extends NotificationSender:
@@ -85,22 +87,24 @@ class HttpNotificationSender @Inject()(
   private given HeaderCarrier = HeaderCarrier()
 
   private val artificialDelay =
-    config.getMillis("notifications.artificial-delay").millis // TODO configure duration
+    config.get[FiniteDuration]("notifications.artificial-delay")
 
   override def sendNotification(uploadedFile: ProcessedFile): Future[Unit] =
     withArtificialDelay(artificialDelay):
       uploadedFile match
         case f: ProcessedFile.UploadedFile      => notifySuccessfulCallback(f)
         case f: ProcessedFile.QuarantinedFile   => notifyFailedCallback(f.reference, "QUARANTINE", f.error, f.callbackUrl)
-        case f: ProcessedFile.RejectedFile      => notifyFailedCallback(f.reference, "REJECTED", f.error, f.callbackUrl)
-        case f: ProcessedFile.UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN", f.error, f.callbackUrl)
+        case f: ProcessedFile.RejectedFile      => notifyFailedCallback(f.reference, "REJECTED"  , f.error, f.callbackUrl)
+        case f: ProcessedFile.UnknownReasonFile => notifyFailedCallback(f.reference, "UNKNOWN"   , f.error, f.callbackUrl)
 
   private def notifySuccessfulCallback(uploadedFile: ProcessedFile.UploadedFile): Future[Unit] =
     val callback =
       ReadyCallbackBody(uploadedFile.reference, uploadedFile.downloadUrl, uploadDetails = uploadedFile.uploadDetails)
 
-    httpClient
-      .POST[ReadyCallbackBody, HttpResponse](uploadedFile.callbackUrl, callback)
+    httpClientV2
+      .post(uploadedFile.callbackUrl)
+      .withBody(Json.toJson(callback))
+      .execute[HttpResponse]
       .map: httpResponse =>
         logger.info:
           s"""File ready notification for Key=[${uploadedFile.reference.value}] sent to service with callbackUrl: [${uploadedFile.callbackUrl}].
@@ -115,8 +119,10 @@ class HttpNotificationSender @Inject()(
     val callback =
       FailedCallbackBody(reference, failureDetails = ErrorDetails(failureReason, error))
 
-    httpClient
-      .POST[FailedCallbackBody, HttpResponse](callbackUrl, callback)
+    httpClientV2
+      .post(callbackUrl)
+      .withBody(Json.toJson(callback))
+      .execute[HttpResponse]
       .map: httpResponse =>
         logger.info(
           s"""File failed notification for Key=[${reference.value}] sent to service with callbackUrl: [${callbackUrl}].
