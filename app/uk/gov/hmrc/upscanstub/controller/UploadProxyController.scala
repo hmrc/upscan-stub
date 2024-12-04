@@ -19,7 +19,6 @@ package uk.gov.hmrc.upscanstub.controller
 import org.apache.pekko.stream.IOResult
 import org.apache.pekko.stream.scaladsl.{FileIO, Source}
 import org.apache.pekko.util.ByteString
-import org.apache.http.client.utils.URIBuilder
 import play.api.Logger
 import play.api.http.Status
 import play.api.libs.Files.TemporaryFile
@@ -27,13 +26,13 @@ import play.api.libs.json.Json
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc._
+import sttp.model.Uri.UriContext
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 import uk.gov.hmrc.upscanstub.controller.UploadProxyController.ErrorResponseHandler.{errorResponse, proxyErrorResponse}
 import uk.gov.hmrc.upscanstub.controller.UploadProxyController.TemporaryFilePart.partitionTrys
 import uk.gov.hmrc.upscanstub.util.MultipartFormDataSummaries.{summariseDataParts, summariseFileParts}
 
 import java.net.URI
-import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
@@ -195,7 +194,7 @@ private object UploadProxyController:
         .flatMap(_.headOption)
 
     private def validateErrorActionRedirectUrl(redirectUrl: String, key: String): Either[Result, URI] =
-      Try(URIBuilder(redirectUrl, UTF_8).addParameter("key", key).build())
+      Try(uri"$redirectUrl".addParam("key", "key").toJavaUri)
         .toOption.toRight(left = badRedirectUrl)
 
   end MultipartFormExtractor
@@ -244,11 +243,7 @@ private object UploadProxyController:
 
     private def redirectResult(url: String, queryParams: Map[String, String]): Result =
       Results.SeeOther:
-        queryParams
-          .foldLeft(URIBuilder(url)): (urlBuilder, param) =>
-            urlBuilder.addParameter(param._1, param._2)
-          .build()
-          .toASCIIString
+        uri"$url".addParams(queryParams).toString
 
     private def xmlErrorFields(xmlBody: String): Seq[(String, String)] =
       Try(scala.xml.XML.loadString(xmlBody))

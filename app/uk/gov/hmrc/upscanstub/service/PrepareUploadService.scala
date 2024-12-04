@@ -16,8 +16,8 @@
 
 package uk.gov.hmrc.upscanstub.service
 
-import org.apache.http.client.utils.URIBuilder
 import play.api.libs.json.{JsArray, JsObject, Json}
+import sttp.model.Uri.UriContext
 import uk.gov.hmrc.upscanstub.model._
 import uk.gov.hmrc.upscanstub.model.initiate.{PrepareUploadResponse, UploadFormTemplate, UploadSettings}
 import uk.gov.hmrc.upscanstub.util.Base64StringUtils
@@ -68,9 +68,7 @@ class PrepareUploadService @Inject()():
 
   private def successRedirectWithReference(successRedirect: String, reference: Reference): String =
     try
-      val builder = URIBuilder(successRedirect)
-      builder.addParameter("key", reference.value)
-      builder.build().toASCIIString
+      uri"$successRedirect".addParam("key", reference.value).toString
     catch
       // retain existing behaviour and continue with an unadulterated (but invalid) successRedirect URL
       case _: URISyntaxException => successRedirect
