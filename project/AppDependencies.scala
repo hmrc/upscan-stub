@@ -6,10 +6,8 @@ object AppDependencies {
   val bootstrapVersion = "9.5.0"
 
   val compile = Seq(
-    ws,
-    "uk.gov.hmrc"               %% "bootstrap-backend-play-30" % bootstrapVersion,
-    "org.apache.httpcomponents" %  "httpclient"                % "4.5.14",
-    "commons-io"                %  "commons-io"                % "2.15.0"
+    "uk.gov.hmrc"            %% "bootstrap-backend-play-30" % bootstrapVersion,
+    "commons-io"             %  "commons-io"                % "2.18.0"
   )
 
   val test = Seq(
