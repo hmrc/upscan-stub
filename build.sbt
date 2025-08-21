@@ -1,7 +1,7 @@
 import uk.gov.hmrc.DefaultBuildSettings
 
 ThisBuild / majorVersion := 0
-ThisBuild / scalaVersion := "3.3.5"
+ThisBuild / scalaVersion := "3.3.6"
 ThisBuild / scalacOptions += "-Wconf:msg=Flag.*repeatedly:s"
 
 lazy val microservice = Project("upscan-stub", file("."))
@@ -10,7 +10,6 @@ lazy val microservice = Project("upscan-stub", file("."))
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test
   )
   .settings(scalacOptions += "-Wconf:src=routes/.*:s")
-  .settings(resolvers += Resolver.jcenterRepo)
   .settings(PlayKeys.playDefaultPort := 9570)
 
 lazy val it =
